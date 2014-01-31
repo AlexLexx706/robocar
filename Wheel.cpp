@@ -21,9 +21,7 @@ Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
     power = 0.f;
 
     for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
-    {
         speed_list[i] = 0.;
-    }
 }
 
 
@@ -54,16 +52,58 @@ void Wheel::set_power(float value)
 
 void Wheel::update()
 {
-    update_speed_value();
-    
-//    if ( get_speed() > get_abs_speed() )
-//       set_power(get_power() - 0.001);
-//    else
-//       set_power(get_power() + 0.001);
+    update_speed_value2();
+
+    if ( get_speed() > get_abs_speed() )
+    {
+       float value = get_power() - 0.001;
+
+       if (value < 0.0)
+       {
+           value = 0.0f;
+       }
+       set_power(value);
+    }
+    else
+    {
+       set_power(get_power() + 0.001);
+    }
 }
 
 
 void Wheel::update_speed_value()
+{
+    int cur_state = digitalRead(speed_pin);
+    if ( state != cur_state )
+    {
+        if ( state == HIGH && cur_state == LOW )
+            counter++;
+        state = cur_state;
+    }
+    
+    //считаем что скорость
+    unsigned long cur_time = micros();
+
+    if (cur_time > (start_time + 10000) )
+    {
+        unsigned long dt = cur_time - start_time;
+        speed_list[speed_list_index] = counter * (float(dt)/10000.f);
+        start_time = cur_time;
+        counter = 0;
+        speed_list_index++;
+        speed_list_index %= (sizeof(speed_list)/sizeof(speed_list[0]));
+        cur_speed = 0.f;
+
+        for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
+           cur_speed += speed_list[i];
+
+        cur_speed = cur_speed / (sizeof(speed_list)/sizeof(speed_list[0]));
+    }
+}
+
+
+
+void Wheel::update_speed_value2()
 {
     int cur_state = digitalRead(speed_pin);
     unsigned long cur_time = micros();
@@ -110,5 +150,6 @@ void Wheel::update_speed_value()
         cur_speed = cur_speed / (sizeof(speed_list)/sizeof(speed_list[0]));
     }
 }
+
 
 

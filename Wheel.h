@@ -27,6 +27,7 @@ private:
     float abs_speed;
     
     void update_speed_value();
+    void update_speed_value2();
 };
 
 #endif
