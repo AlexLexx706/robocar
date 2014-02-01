@@ -1,7 +1,6 @@
 #ifndef _WHEEL_SPEED_H_
 #define _WHEEL_SPEED_H_
-#include <arduino.h>
-
+#include <Arduino.h>
 class Wheel
 {
 public:
@@ -13,6 +12,9 @@ public:
     float get_speed() const {return cur_speed;};
     void set_power(float value);
     float get_power() const {return power;}
+    void set_speed_control(bool enable){speed_control = enable;};
+    bool is_speed_control() const {return speed_control;};
+    
 private:
     uint32_t counter;
     int state;
@@ -25,6 +27,7 @@ private:
     int backward_pin;
     float power;
     float abs_speed;
+    bool speed_control;
     
     void update_speed_value();
 };

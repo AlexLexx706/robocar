@@ -1,21 +1,22 @@
 #ifndef ALEX_CAR_H
 #define ALEX_CAR_H
+#include "Wheel.h"
+#include "Ultrasonic.h"
 
 class Car
 {
 public:
-    enum Wheel{LeftWheel, RightWheel};
-    static Car & instance();
+    Car();
     void update();
-    void set_speed(Wheel wheel, float value);    
-    
+    Wheel wheel_left;
+    Wheel wheel_right;
+
 private:
     unsigned long ud_start_time;
     float distance_cm;
+    Ultrasonic ultrasonic;
     
-    Car();
     void update_distance();
-    
 };
 
 #endif

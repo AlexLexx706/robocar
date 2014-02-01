@@ -9,6 +9,7 @@ Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
     speed_list_index = 0;;
     cur_speed = 0.;
     abs_speed = 0.;
+    speed_control = false;
 
     pinMode(speed_pin, INPUT);
     pinMode(A0, INPUT);
@@ -26,6 +27,7 @@ Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
     for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
         speed_list[i] = 0.;
 }
+
 
 
 void Wheel::set_power(float value)
@@ -56,21 +58,23 @@ void Wheel::set_power(float value)
 void Wheel::update()
 {
     update_speed_value();
-    return;
 
-    if ( get_speed() > get_abs_speed() )
+    if ( speed_control )
     {
-       float value = get_power() - 0.0001;
-
-       if (value < 0.0)
-       {
-           value = 0.0f;
-       }
-       set_power(value);
-    }
-    else
-    {
-       set_power(get_power() + 0.0001);
+        if ( get_speed() > get_abs_speed() )
+        {
+           float value = get_power() - 0.0001;
+    
+           if (value < 0.0)
+           {
+               value = 0.0f;
+           }
+           set_power(value);
+        }
+        else
+        {
+           set_power(get_power() + 0.0001);
+        }
     }
 }
 

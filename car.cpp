@@ -1,30 +1,16 @@
 #include "car.h"
-#include <Ultrasonic.h>
 #include <Wire.h>
 #include <I2Cdev.h>
-#include "vectoper.h"
+#include "Wheel.h"
 
-Ultrasonic ultrasonic(D7, D8);
-
-
-Car & Car::instance()
-{
-    static Car car;
-    return car;
-}
-
-Car::Car():
-    ud_start_time(millis()),
-    distance_cm(0.f)
-{
- 
+Car::Car(): ud_start_time(millis()),distance_cm(0.f),wheel_left(4, 3, 10),wheel_right(5, 6, 9),ultrasonic(7, 8)
+{ 
 }
 
 void Car::update()
 {
-    //1. получаем направление.
-   
-    //2. получим расстояние.
+    wheel_left.update();
+    wheel_right.update();
     update_distance();
 } 
 
