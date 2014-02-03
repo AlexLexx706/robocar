@@ -51,6 +51,11 @@ void Wheel::set_power(float value)
             analogWrite(backward_pin, int(-(value * 255)));
             digitalWrite(forward_pin, LOW);
         }
+        else
+        {
+            digitalWrite(backward_pin, LOW);
+            digitalWrite(forward_pin, LOW);
+        }
     }
 }
 

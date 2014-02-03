@@ -3,7 +3,12 @@
 #include <I2Cdev.h>
 #include "Wheel.h"
 
-Car::Car(): ud_start_time(millis()),distance_cm(0.f),wheel_left(4, 3, 10),wheel_right(5, 6, 9),ultrasonic(7, 8)
+Car::Car():
+    ud_start_time(millis()),
+    distance_cm(0.f),
+    wheel_left(4, 3, 5),
+    wheel_right(A1, 6, 9),
+    ultrasonic(7, 8)
 { 
 }
 
