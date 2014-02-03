@@ -37,28 +37,6 @@ void loop()
         uint8_t size = radio.getDynamicPayloadSize();
         uint8_t data[33];
         radio.read(data, size);
-
-        //левое колесо
-        if ( data[1] == 0 )
-            car.wheel_left.set_power(*((float *)&data[2]));
-        else if ( data[1] == 1 )
-            car.wheel_right.set_power(*((float *)&data[2]));
-        else if ( data[1] == 2 )
-        {
-            float l = *((float *)&data[2]);
-            float r = *((float *)&data[6]);
-            
-            Serial.print(l);
-            Serial.print("    ");
-            Serial.print(r);
-            Serial.print("\r\n");
-            car.wheel_left.set_power(l);
-            car.wheel_right.set_power(r);
-        }
-        else if ( data[1] == 3 )
-        {
-            car.wheel_left.set_power(0.f);
-            car.wheel_right.set_power(0.f);
-        }
+        car.process_command(&data[1], size);
     }
 }
