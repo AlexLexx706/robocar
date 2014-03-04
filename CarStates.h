@@ -6,7 +6,7 @@ class Car;
 class State
 {
 public:
-    enum Type {MoveForward, Turn, MoveBack};
+    enum Type {MoveForward, Turn, MoveBack, TurnAngle};
     enum ProcessState {InProgress, Ok, Failed};
 
     State(Car & _car, Type _type):car(_car), type(_type),is_active(false){}
@@ -66,6 +66,24 @@ private:
     unsigned long max_time;
     unsigned long start_time;
     float max_power;
+};
+
+//Повернуться на угол
+class TurnAngleState: public State
+{
+public:
+    TurnAngleState(Car & car, float max_window,  float min_window, float max_power, float min_power);
+    virtual void start(void * param);
+    virtual ProcessState process();
+    float get_direction();
+    
+    
+private:
+    float direction[2];
+    float max_window;
+    float min_window;
+    float max_power;
+    float min_power;
 };
 
 

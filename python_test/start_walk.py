@@ -11,5 +11,5 @@ def send_data(port, data):
 
 if __name__ == '__main__':
     import math
-    port = Serial(port="com9", baudrate=256000)
+    port = Serial(port="com12", baudrate=256000)
     print struct.unpack("<b", send_data(port, struct.pack("<B", 4)))[0]

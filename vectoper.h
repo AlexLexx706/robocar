@@ -22,4 +22,4 @@ VECTOR_TYPE ad_vo_norm_l1(long int n, VECTOR_TYPE * v); /* l_1 norm of the vecto
 
 VECTOR_TYPE ad_vo_norm_max(long int n, VECTOR_TYPE * v); /* max norm (l_infinity norm) of the vector v */
 
-#endif
+#endif 

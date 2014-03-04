@@ -5,6 +5,8 @@
 #include "CarStates.h"
 #include <Arduino.h>
 
+#define PI 3.14159265
+
 Car::Car():
     ud_start_time(millis()),
     distance_cm(0.f),
@@ -20,7 +22,12 @@ Car::Car():
     move_forward_state = new MoveForwardState(*this, 0.4, 15.f);
     turn_state = new TurnState(*this,  800000, 15.f, 0.3);
     move_back_state = new MoveBackState(*this, 800000, 0.3);
+    turn_angle_state = new TurnAngleState(*this, PI/180. * 120., PI/180. * 4, 0.45, 0.3);
+   
     cur_state = move_forward_state;
+    giro_angles[0] = 0.f;
+    giro_angles[1] = 0.f;
+    giro_angles[2] = 0.f;
 }
 
 Car::~Car()
@@ -36,7 +43,14 @@ void Car::update()
     wheel_left.update();
     wheel_right.update();
     update_distance();
-    
+
+//    Serial.print(giro_angles[0]);
+//    Serial.print("\t");
+//    Serial.print(giro_angles[1]);
+//    Serial.print("\t");
+//    Serial.print(giro_angles[2]);
+//    Serial.println("");
+
     //потерянна связь с оператором.
     if (check_last_time && (micros() > last_cmd_time + 100000) )
     {
@@ -109,6 +123,9 @@ void Car::update()
             TurnState::Direction dir(TurnState::Left);
             cur_state->start(&dir);
         }
+        else if (cur_state->get_type() == State::TurnAngle )
+        {
+        }
     }
 } 
 
@@ -151,6 +168,13 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         cur_state->start(0);
         enable_walk = true;
         Serial.println("enable_walk");
+    }
+    else if ( data[0] == Test && data_size >= 5 )
+    {
+        cur_state = turn_angle_state;
+        cur_state->start(&data[1]);
+        enable_walk = true;
+        Serial.println("enable_walk test");
     }
 
     //Запрос времени комманды.

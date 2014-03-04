@@ -11,6 +11,7 @@ def send_data(port, data):
 
 if __name__ == '__main__':
     import math
+    import time
     port = Serial(port="com12", baudrate=256000)
-    value = math.cos(time.time()/2.0)
-    print struct.unpack("<b", send_data(port, struct.pack("<B", 3)))[0]
+    angle = 0.0
+    print struct.unpack("<b", send_data(port, struct.pack("<Bf", 5, angle)))[0]
