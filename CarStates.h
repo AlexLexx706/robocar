@@ -1,7 +1,9 @@
 #ifndef _CarState_H
 #define _CarState_H
+#include <PID_v1.h>
 
 class Car;
+class PID;
 
 class State
 {
@@ -76,14 +78,17 @@ public:
     virtual void start(void * param);
     virtual ProcessState process();
     float get_direction();
+    void set_params(float p, float i, float d);
+    void set_angle(float angle);
     
     
 private:
     float direction[2];
-    float max_window;
-    float min_window;
-    float max_power;
-    float min_power;
+    double angle;
+    double set_point;
+    double error;
+    double power;
+    PID myPID;
 };
 
 

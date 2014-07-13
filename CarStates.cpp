@@ -2,6 +2,7 @@
 #include "car.h"
 #include "vectoper.h"
 
+
 MoveForwardState::MoveForwardState(Car & car, float _max_power, float _min_distance):
   State(car, State::MoveForward),
   max_power(_max_power),
@@ -125,22 +126,51 @@ State::ProcessState MoveBackState::process()
 ///////////////////////////////////////////////////////////////////////////////////
 TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window, float _max_power, float _min_power):
     State(car, State::TurnAngle),
-    max_window(_max_window),
-    min_window(_min_window),
-    max_power(_max_power),
-    min_power(_min_power)
+    angle(0.f),
+    set_point(0.f),
+    error(0.f),
+    power(0.f),
+    myPID(&error, &power, &set_point, 1.1, 0.5, 0.1, DIRECT)
+    //myPID(&error, &power, &angle, 0, 0, 0, DIRECT)
 {
-    direction[0] = 1.f;
-    direction[0] = 1.f;
+    myPID.SetOutputLimits(-0.7, 0.7);
+    myPID.SetSampleTime(10);
+    direction[0] = 0.f;
+    direction[1] = 1.f;
+    myPID.SetMode(AUTOMATIC);
 }
+
+void TurnAngleState::set_params(float p, float i, float d)
+{
+    Serial.print("p:");
+    Serial.print(p, 4);
+    Serial.print(" i:");
+    Serial.print(i, 4);
+    Serial.print(" d:");
+    Serial.print(d, 4);
+    Serial.println("");
+    
+    myPID.SetTunings(p, i, d);
+}
+
+void TurnAngleState::set_angle(float c_angle)
+{
+    Serial.print("angle:");
+    Serial.print(c_angle, 4);
+    Serial.println("");
+    
+    angle = c_angle;
+    direction[0] = cos(angle);
+    direction[1] = sin(angle);
+}
+
+
+
 void TurnAngleState::start(void * param)
 {
     //установим угол.
     if (param)
-    {
-        direction[0] = cos(*((float *)(param)));
-        direction[1] = sin(*((float *)(param)));
-    }
+        set_angle(*((float *)(param)));
 
     car.wheel_left.set_power(0);
     car.wheel_right.set_power(0);
@@ -167,44 +197,31 @@ State::ProcessState TurnAngleState::process()
         return Failed;
     
     //рассчёт угла и направления поворота.
-    float angle = get_direction();
-    float abs_angle = abs(angle);
-
+    error = get_direction();
+    myPID.Compute();
     
-    if ( abs_angle <= min_window )
+    Serial.print("c_a:");
+    Serial.print(car.giro_angles[0], 4);
+    
+    Serial.print(" d_a:");
+    Serial.print(angle, 4);
+
+    Serial.print(" e_a:");
+    Serial.print(error, 4);
+    Serial.print(" p:");
+    Serial.print(power, 4);
+    Serial.print("\n");
+
+    if (power >= 0 )
     {
-        car.wheel_left.set_power(0);
-        car.wheel_right.set_power(0);
-        return Ok;
+        car.wheel_left.set_power(-power);
+        car.wheel_right.set_power(power);
+        return InProgress;
     }
     else
     {
-        Serial.print("max:");
-        Serial.print(max_window);
-        Serial.print(" min:");
-        Serial.print(min_window);
-        
-        float cur_power = max_power;
-
-        if ( abs_angle < max_window )
-        {
-            cur_power = max_power - (max_power - min_power) * (1.f - (abs_angle - min_window)/(max_window - min_window));
-        }
-        Serial.print("cur_power:");
-        Serial.println(cur_power);
-        
-        //поворот на лево
-        if (angle > 0 )
-        {
-            car.wheel_left.set_power(cur_power);
-            car.wheel_right.set_power(-cur_power);
-            return InProgress;
-        }
-        else
-        {
-            car.wheel_left.set_power(-cur_power);
-            car.wheel_right.set_power(cur_power);
-            return InProgress;
-        }
+        car.wheel_left.set_power(-power);
+        car.wheel_right.set_power(power);
+        return InProgress;
     }
 }

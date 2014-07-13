@@ -1,6 +1,7 @@
 #include "car.h"
 #include <SPI.h>
 #include <RF24.h>
+#include <PID_v1.h>
 
 
 #include "I2Cdev.h"
@@ -19,6 +20,8 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 // orientation/motion vars
 Quaternion q;           // [w, x, y, z]         quaternion container
 volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+unsigned long start_time;
+unsigned int get_giro_data_count = 0;
 
 void dmpDataReady()
 {
@@ -60,6 +63,9 @@ void update_dmp6(float euler[3])
 
           mpu.dmpGetQuaternion(&q, fifoBuffer);
           mpu.dmpGetEuler(euler, &q);
+          get_giro_data_count++;
+          //Serial.print("e:");
+          //Serial.println(euler[0], 4);
     }
 }
 
@@ -77,6 +83,7 @@ void setup()
     car.wheel_left.set_power(0);
     car.wheel_right.set_power(0);
 
+    /**
     radio.begin();
     radio.setChannel(66);
     radio.setDataRate(RF24_2MBPS);
@@ -88,15 +95,16 @@ void setup()
     radio.openReadingPipe(1, pipes[1]);
     radio.startListening();
     radio.enableDynamicPayloads();
+    */
     
     // join I2C bus (I2Cdev library doesn't do this automatically)
     Wire.begin();
     TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-    Serial.println("mpu.initialize");
+    //Serial.println("mpu.initialize");
     mpu.initialize();
-    Serial.println("mpu.testConnection");
+    //Serial.println("mpu.testConnection");
     mpu.testConnection();
-    Serial.println("mpu.dmpInitialize");
+    //Serial.println("mpu.dmpInitialize");
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -115,12 +123,50 @@ void setup()
         dmpReady = true;
         packetSize = mpu.dmpGetFIFOPacketSize();
     }
+    //car.start_walk();
+    car.start_rotate(0);
+    start_time = millis();
+    get_giro_data_count = 0;
 }
+
+
+uint8_t buffer[33];
+uint8_t buffer_size = 0;
 
 void loop() 
 {
     update_dmp6(car.giro_angles);
+    unsigned long cur_time(millis());
+
+    /**
+    if ( cur_time >= start_time + 5000 ) 
+    {
+        Serial.print("c:");  
+        Serial.println(get_giro_data_count / 5.0);
+        get_giro_data_count = 0;
+        start_time = cur_time;
+    }
+    **/
     car.update();
+    
+    //чтение данных из ком порта
+    // send data only when you receive data:
+
+    while (Serial.available())
+    {
+       buffer[buffer_size] = Serial.read();
+
+       //буффер собран
+       if ( buffer[0] == buffer_size)
+       {
+           car.process_command(&buffer[1], buffer[0]);
+           buffer_size = 0;
+       }
+       else 
+           buffer_size++;
+    }
+    
+    /**
     //проверка данных
     if (radio.available())
     {
@@ -129,4 +175,5 @@ void loop()
         radio.read(data, size);
         car.process_command(&data[1], size);
     }
+    **/
 }
