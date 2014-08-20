@@ -209,15 +209,13 @@ void Car::start_rotate(float angle)
     //Serial.println("enable_walk test");
 }
 
-
-
-
-
 void Car::update_distance()
 {
     if ( millis() > ud_start_time + 100 )
     {       
         distance_cm = ultrasonic.Ranging(CM);
         ud_start_time = millis();
+        //Serial.print("distance: ");
+        //Serial.println(distance_cm);
     }
 }

@@ -1,0 +1,111 @@
+#externalcomments {
+	margin-top: 50px;
+	font-size: 12px;
+	color: black;
+	clear: both;
+}
+
+#externalcomments .post {
+	margin-top: 10px;
+	padding-left: 5px;
+	font-size: 12px;
+}
+
+#externalcomments .postericon {
+	float: left;
+	padding: 5px;
+	margin: 0px;
+}
+
+#externalcomments .userinfo .commentdate {
+	color: #999999;
+}
+
+#externalcomments .commentbody {
+	margin-left: 5px;
+}
+
+#externalcomments .post .commentbuttons {
+	font-size: 11px;
+	clear: both;
+}
+
+#externalcomments .subcomments {
+	border-left: 1px dotted #CCCCCC;
+	margin-left: 20px;
+}
+
+#externalcomments #newpost {
+	margin-left: 15px;
+	margin-top: 20px;
+}
+
+#externalcomments #newpost p {
+	padding: 3px;
+	margin: 0px;
+}
+
+#externalcomments #newpost textarea {
+	width: 400px;
+	height: 80px;
+	margin: 0;
+}
+
+#externalcomments .post .clearer {
+	clear: both;
+}
+
+#externalcomments #loginalert {
+	margin: 0.5em;
+}
+
+#reportcommentdialog textarea {
+	height: 80px;
+}
+
+.storecomments .commentstitle {
+	color: #e34c00;
+	line-height: 1.3em;
+	font-family: "TyponineSans Monospace Regular 4", "TyponineSans Monospace Light 5";
+	font-style: normal;
+	font-weight: normal;
+	text-transform: lowercase;
+	margin-bottom: .35em;
+	margin-top: .65em;
+	font-size: 1.277777rem;
+}
+.storecomments .commentstitle:first-letter {
+	text-transform: uppercase;
+}
+
+.storecomments .posthead {
+	line-height: 11px;
+	font-size: 15px;
+	font-weight: bold;
+}
+
+.wikicomments .posthead {
+	font-size: 15px;
+	font-weight: bold;
+}
+
+.wikicomments .commentbody {
+	margin-top: 5px;
+}
+
+.wikicomments .postericon img {
+	margin-bottom: 0px;
+}
+
+.scuolacomments .commentstitle {
+	color: #FFFFFF;
+	background-color: #00979c;
+	padding: 6px;
+	font-size: 14px;
+	font-weight: bolder;
+	font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+}
+
+.scuolacomments .postericon img {
+	margin: 0px;
+}

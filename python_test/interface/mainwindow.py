@@ -32,6 +32,7 @@ class MainWindow(QtGui.QMainWindow):
         self.doubleSpinBox_max_p.setValue(self.settings.value("max_p", 10).toDouble()[0])
         self.doubleSpinBox_max_i.setValue(self.settings.value("max_i", 10).toDouble()[0])
         self.doubleSpinBox_max_d.setValue(self.settings.value("max_d", 10).toDouble()[0])
+        self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
 
         self.set_p(p)
         self.set_i(i)
@@ -59,11 +60,23 @@ class MainWindow(QtGui.QMainWindow):
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_ANGLE, self.get_angle())
             self.serial.write(struct.pack("<B", len(data)) + data)
-            
+    
+    @pyqtSlot()
+    def on_pushButton_send_clicked(self):
+        if self.serial is not None:
+            self.serial.write(str(self.lineEdit_text.text()))
+    
+    @pyqtSlot("QString")
+    def on_lineEdit_speed_textChanged(self, text):
+        self.settings.setValue("speed", text)
+    
     @pyqtSlot()
     def on_pushButton_connect_clicked(self):
         if self.serial is None:
-            self.serial = Serial("COM{}".format(self.spinBox_port_name.value()), 115200, timeout=4)
+            #self.serial = Serial("COM{}".format(self.spinBox_port_name.value()), 115200, timeout=4)
+            speed = int(self.lineEdit_speed.text())
+            print speed
+            self.serial = Serial("COM{}".format(self.spinBox_port_name.value()), speed, timeout=4)
             self.stop_log = False
             self.log_thread = threading.Thread(target=self.log_thread_proc)
             self.log_thread.start()
@@ -82,6 +95,7 @@ class MainWindow(QtGui.QMainWindow):
             while not self.stop_log:
                 s = self.serial.read()
                 if len(s) > 0:
+                    #self.add_line.emit(s)
                     if s != "\n":
                         line += s
                     else:
