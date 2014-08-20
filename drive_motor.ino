@@ -5,20 +5,20 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
 
-MPU6050 mpu;
-bool dmpReady = false;  // set true if DMP init was successful
-uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
+static MPU6050 mpu;
+static bool dmpReady = false;  // set true if DMP init was successful
+static uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
+static uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+static uint16_t fifoCount;     // count of all bytes currently in FIFO
+static uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
-Quaternion q;           // [w, x, y, z]         quaternion container
-volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
-Car car;
-uint8_t buffer[33];
-uint8_t buffer_size = 0;
-bool setup_flag = false;
+static Quaternion q;           // [w, x, y, z]         quaternion container
+static volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+static Car car;
+static uint8_t buffer[33];
+static uint8_t buffer_size = 0;
+static bool setup_flag = false;
 
 
 void dmpDataReady()

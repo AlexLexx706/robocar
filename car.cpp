@@ -44,7 +44,7 @@ void Car::update()
     wheel_left.update();
     wheel_right.update();
     update_distance();
-
+    
     /**
     Serial.print(giro_angles[0]);
     Serial.print("\t");
@@ -57,6 +57,7 @@ void Car::update()
     **/
 
     //потерянна связь с оператором.
+    /**
     if (check_last_time && (micros() > last_cmd_time + 100000) )
     {
         //остановка машины.
@@ -65,7 +66,7 @@ void Car::update()
         check_last_time = false;
     }
     //алгоритм обхода препятствий.
-    else if ( enable_walk )
+    else **/if ( enable_walk )
     {
         State::ProcessState res = cur_state->process();
 
@@ -186,6 +187,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     }
     else if ( data[0] == SetAngle)
     {
+        start_rotate(*((float *)&data[1]));
         ((TurnAngleState *)turn_angle_state)->set_angle(*((float *)&data[1]));
     }
 
@@ -207,9 +209,12 @@ void Car::start_walk()
 
 void Car::start_rotate(float angle)
 {
-    cur_state = turn_angle_state;
-    cur_state->start(&angle);
-    enable_walk = true;
+    if (cur_state != turn_angle_state)
+    {
+        cur_state = turn_angle_state;
+        cur_state->start(&angle);
+        enable_walk = true;
+    }
     //Serial.println("enable_walk test");
 }
 
