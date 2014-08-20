@@ -12,6 +12,8 @@ class MainWindow(QtGui.QMainWindow):
     BRICK = 1
     add_char = pyqtSignal(str)
     add_line = pyqtSignal(str)
+    CMD_SET_LEFT_WHEEL_POWER = 0
+    CMD_SET_RIGTH_WHEEL_POWER = 1
     CMD_PID_SETTINGS = 5
     CMD_ANGLE = 6
     
@@ -38,14 +40,23 @@ class MainWindow(QtGui.QMainWindow):
         self.set_i(i)
         self.set_d(d)
 
+        self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
+        self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
+
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
         self.add_char.connect(self.on_add_char)
         self.add_line.connect(self.on_add_line)
         self.stop_log = False
     
     def on_add_char(self, s):
-        self.plainTextEdit_log.moveCursor(0, 11)
-        self.plainTextEdit_log.insertPlainText(s)
+        cursor = self.plainTextEdit_log.textCursor()
+        cursor.movePosition(0, 11)
+        cursor.insertText(s)
+        #self.plainTextEdit_log.moveCursor(0, 11)
+        #self.plainTextEdit_log.insertPlainText(s)
+        #cursor.clearSelection();
+        #cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
+        #cursor.insertText("Hello World");
     
     def on_add_line(self, line):
         self.plainTextEdit_log.appendPlainText(line)
@@ -60,7 +71,71 @@ class MainWindow(QtGui.QMainWindow):
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_ANGLE, self.get_angle())
             self.serial.write(struct.pack("<B", len(data)) + data)
-    
+
+    @pyqtSlot()
+    def on_pushButton_clear_power_clicked(self):
+        self.set_left_wheel_power(0)
+        self.set_right_wheel_power(0)
+
+    ###########################################
+    @pyqtSlot("int")
+    def on_horizontalSlider_left_wheel_valueChanged(self, value):
+        self.set_left_wheel_power(-1 + value / float(self.horizontalSlider_left_wheel.maximum()) * 2.0)
+
+    @pyqtSlot("double")
+    def on_doubleSpinBox_left_wheel_valueChanged(self, value):
+        self.set_left_wheel_power(value)
+
+    def set_left_wheel_power(self, value):
+        self.doubleSpinBox_left_wheel.blockSignals(True)
+        self.horizontalSlider_left_wheel.blockSignals(True)
+
+        self.doubleSpinBox_left_wheel.setValue(value)
+        self.horizontalSlider_left_wheel.setValue((value + 1.0) / 2.0 * self.horizontalSlider_left_wheel.maximum())
+
+        self.doubleSpinBox_left_wheel.blockSignals(False)
+        self.horizontalSlider_left_wheel.blockSignals(False)
+        self.settings.setValue("left_wheel_power", value)
+        self.send_left_wheel_power(value)
+
+    def get_left_wheel_power(self):
+        return self.doubleSpinBox_left_wheel.value()
+
+    def send_left_wheel_power(self, value):
+        if self.serial is not None:
+            data = struct.pack("<Bf", self.CMD_SET_LEFT_WHEEL_POWER, value)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+
+    ##########################################################
+    @pyqtSlot("int")
+    def on_horizontalSlider_right_wheel_valueChanged(self, value):
+        self.set_right_wheel_power(-1 + value / float(self.horizontalSlider_right_wheel.maximum()) * 2.0)
+
+    @pyqtSlot("double")
+    def on_doubleSpinBox_right_wheel_valueChanged(self, value):
+        self.set_right_wheel_power(value)
+
+    def set_right_wheel_power(self, value):
+        self.doubleSpinBox_right_wheel.blockSignals(True)
+        self.horizontalSlider_right_wheel.blockSignals(True)
+
+        self.doubleSpinBox_right_wheel.setValue(value)
+        self.horizontalSlider_right_wheel.setValue((value + 1.0) / 2.0 * self.horizontalSlider_right_wheel.maximum())
+
+        self.doubleSpinBox_right_wheel.blockSignals(False)
+        self.horizontalSlider_right_wheel.blockSignals(False)
+        self.settings.setValue("right_wheel_power", value)
+        self.send_right_wheel_power(value)
+
+    def get_right_wheel_power(self):
+        return self.doubleSpinBox_right_wheel.value()
+
+    def send_right_wheel_power(self, value):
+        if self.serial is not None:
+            data = struct.pack("<Bf", self.CMD_SET_RIGTH_WHEEL_POWER, value)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+
+    ######################################################################
     @pyqtSlot()
     def on_pushButton_send_clicked(self):
         if self.serial is not None:
@@ -69,7 +144,7 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot("QString")
     def on_lineEdit_speed_textChanged(self, text):
         self.settings.setValue("speed", text)
-    
+
     @pyqtSlot()
     def on_pushButton_connect_clicked(self):
         if self.serial is None:
@@ -95,6 +170,7 @@ class MainWindow(QtGui.QMainWindow):
             while not self.stop_log:
                 s = self.serial.read()
                 if len(s) > 0:
+                    #self.add_char.emit(s)
                     #self.add_line.emit(s)
                     if s != "\n":
                         line += s
