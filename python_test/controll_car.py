@@ -18,7 +18,7 @@ def send_data(port, data):
 def servo_process(cmd_queue):
     from serial import Serial
     import time
-    port = Serial(port="com12", baudrate=256000)
+    port = Serial(port="com15", baudrate=256000)
     
     while 1:
         l, r = cmd_queue.get()

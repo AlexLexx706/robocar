@@ -17,6 +17,12 @@ class MainWindow(QtGui.QMainWindow):
     CMD_PID_SETTINGS = 5
     CMD_ANGLE = 6
     
+    KEY_A = 65
+    KEY_W = 87
+    KEY_D = 68
+    KEY_S = 83
+    CHECKED_KEYS = [KEY_A, KEY_W, KEY_D, KEY_S]
+    
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
         uic.loadUi("main_window.ui", self)
@@ -42,21 +48,81 @@ class MainWindow(QtGui.QMainWindow):
 
         self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
+        self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", False).toBool() else QtCore.Qt.Unchecked)
 
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
         self.add_char.connect(self.on_add_char)
         self.add_line.connect(self.on_add_line)
         self.stop_log = False
+        self.kay_states = {self.KEY_A: False,
+                            self.KEY_W: False,
+                            self.KEY_D: False,
+                            self.KEY_S: False}
+    
+    def update_car_controll(self):
+        if self.is_enable_key_controll():
+            #print self.kay_states
+            l = 0.0
+            r = 0.0
+            max_speed = 0.5
+            rotate_koef = 0.8
+            
+            #вперёд
+            if self.kay_states[self.KEY_W]:
+                l = max_speed
+                r = max_speed
+            #назад
+            elif self.kay_states[self.KEY_S]:
+                l = -max_speed
+                r = -max_speed
+
+            #лево
+            if self.kay_states[self.KEY_A]:
+                if self.kay_states[self.KEY_W]:
+                    l = 0
+                elif  self.kay_states[self.KEY_S]:
+                    l = 0
+                else:
+                    r = max_speed * rotate_koef
+                    l = -max_speed * rotate_koef
+            #право
+            if self.kay_states[self.KEY_D]:
+                if self.kay_states[self.KEY_W]:
+                    r = 0
+                elif self.kay_states[self.KEY_S]:
+                    r = 0
+                else:
+                    r = -max_speed * rotate_koef
+                    l = max_speed * rotate_koef
+            
+            self.send_left_wheel_power(l)
+            self.send_right_wheel_power(r)
+
+    def is_enable_key_controll(self):
+        return self.checkBox_enable_key_controll.isChecked()
+    
+    @pyqtSlot(int)
+    def on_checkBox_enable_key_controll_stateChanged(self, state):
+        self.settings.setValue("enable_key_controll", state == QtCore.Qt.Checked)
+       
+    def winEvent(self, message):
+        #wm_keydown
+        if message.message == 0x0100:
+            if message.wParam in self.CHECKED_KEYS:
+                self.kay_states[message.wParam] = True
+                self.update_car_controll()
+        #wm_keyup
+        elif message.message == 0x0101:
+            if message.wParam in self.CHECKED_KEYS:
+                self.kay_states[message.wParam] = False
+                self.update_car_controll()
+
+        return QtGui.QMainWindow.winEvent(self, message)
     
     def on_add_char(self, s):
         cursor = self.plainTextEdit_log.textCursor()
         cursor.movePosition(0, 11)
         cursor.insertText(s)
-        #self.plainTextEdit_log.moveCursor(0, 11)
-        #self.plainTextEdit_log.insertPlainText(s)
-        #cursor.clearSelection();
-        #cursor.movePosition(QTextCursor::NextWord, QTextCursor::KeepAnchor);
-        #cursor.insertText("Hello World");
     
     def on_add_line(self, line):
         self.plainTextEdit_log.appendPlainText(line)

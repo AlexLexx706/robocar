@@ -149,7 +149,8 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         wheel_left.set_power(*((float *)&data[1]));
         enable_walk = false;
         Serial.print("left_power: ");
-        Serial.println(*((float *)&data[1]));
+        Serial.print(*((float *)&data[1]));
+        Serial.print("\n");
     }
     //правое колесо
     else if ( data[0] == SetRightWheelPower  && data_size >= 5 )
@@ -157,7 +158,8 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         wheel_right.set_power(*((float *)&data[1]));
         enable_walk = false;
         Serial.print("right_power: ");
-        Serial.println(*((float *)&data[1]));
+        Serial.print(*((float *)&data[1]));
+        Serial.print("\n");
     }
     //оба колеса.
     else if ( data[0] == SetWheelsPower  && data_size >= 9 )
@@ -188,7 +190,6 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     else if ( data[0] == SetAngle)
     {
         start_rotate(*((float *)&data[1]));
-        ((TurnAngleState *)turn_angle_state)->set_angle(*((float *)&data[1]));
     }
 
     //Запрос времени комманды.
@@ -209,12 +210,9 @@ void Car::start_walk()
 
 void Car::start_rotate(float angle)
 {
-    if (cur_state != turn_angle_state)
-    {
-        cur_state = turn_angle_state;
-        cur_state->start(&angle);
-        enable_walk = true;
-    }
+    cur_state = turn_angle_state;
+    cur_state->start(&angle);
+    enable_walk = true;
     //Serial.println("enable_walk test");
 }
 

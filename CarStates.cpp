@@ -133,7 +133,7 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     myPID(&error, &power, &set_point, 1.1, 0.5, 0.1, DIRECT)
     //myPID(&error, &power, &angle, 0, 0, 0, DIRECT)
 {
-    myPID.SetOutputLimits(-0.7, 0.7);
+    myPID.SetOutputLimits(-1, 1);
     myPID.SetSampleTime(10);
     direction[0] = 0.f;
     direction[1] = 1.f;
@@ -200,6 +200,7 @@ State::ProcessState TurnAngleState::process()
     error = get_direction();
     myPID.Compute();
     
+    /**
     Serial.print("c_a:");
     Serial.print(car.giro_angles[0], 4);
     
@@ -211,6 +212,7 @@ State::ProcessState TurnAngleState::process()
     Serial.print(" p:");
     Serial.print(power, 4);
     Serial.print("\n");
+    **/
 
     if (power >= 0 )
     {
