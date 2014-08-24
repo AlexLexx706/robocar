@@ -130,14 +130,11 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     set_point(0.f),
     error(0.f),
     power(0.f),
-    myPID(&error, &power, &set_point, 1.1, 0.5, 0.1, DIRECT)
-    //myPID(&error, &power, &angle, 0, 0, 0, DIRECT)
+    myPID(new PID(&error, &power, 2, 0, 0.35))
 {
-    myPID.SetOutputLimits(-1, 1);
-    myPID.SetSampleTime(10);
+    myPID->SetOutputLimits(-1, 1);
     direction[0] = 0.f;
     direction[1] = 1.f;
-    myPID.SetMode(AUTOMATIC);
 }
 
 void TurnAngleState::set_params(float p, float i, float d)
@@ -149,8 +146,10 @@ void TurnAngleState::set_params(float p, float i, float d)
     Serial.print(" d:");
     Serial.print(d, 4);
     Serial.println("");
-    
-    myPID.SetTunings(p, i, d);
+  
+    delete myPID;
+    myPID = new PID(&error, &power, p, i, d);
+    myPID->SetOutputLimits(-1, 1);
 }
 
 void TurnAngleState::set_angle(float c_angle)
@@ -198,7 +197,7 @@ State::ProcessState TurnAngleState::process()
     
     //рассчёт угла и направления поворота.
     error = get_direction();
-    myPID.Compute();
+    myPID->Compute();
     
     /**
     Serial.print("c_a:");

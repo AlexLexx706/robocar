@@ -1,6 +1,6 @@
 #ifndef _CarState_H
 #define _CarState_H
-#include <PID_v1.h>
+#include "my_pid.h"
 
 class Car;
 class PID;
@@ -88,7 +88,7 @@ private:
     double set_point;
     double error;
     double power;
-    PID myPID;
+    PID * myPID;
 };
 
 
