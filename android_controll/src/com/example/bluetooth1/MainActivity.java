@@ -15,9 +15,12 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
-import android.text.Layout;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
@@ -29,7 +32,7 @@ import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
  
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements SensorEventListener{
   private static final String TAG = "bluetooth1";
    
   Button btnOn, btnOff;
@@ -37,7 +40,6 @@ public class MainActivity extends Activity {
   private static final int REQUEST_ENABLE_BT = 1;
   private BluetoothAdapter btAdapter = null;
   private BluetoothSocket btSocket = null;
-  private OutputStream outStream = null;
   private InputStream in_stream = null;
   private Spinner spinner_device_list;
   private SeekBar seekBar_angle;
@@ -46,6 +48,10 @@ public class MainActivity extends Activity {
   private Handler handler;
   private TextView textView_messages;
   private Thread read_thread = null;
+  private SensorManager mSensorManager;
+  private Sensor mAccelerometer;
+  private Protocol protocol = null;
+
   
   public final int MESSAGE_READ = 1;
 
@@ -131,6 +137,9 @@ public class MainActivity extends Activity {
     btAdapter = BluetoothAdapter.getDefaultAdapter();
     checkBTState();
     
+    mSensorManager = (SensorManager)getSystemService(SENSOR_SERVICE);
+    mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+    
     //получим список устройств.
     ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, get_paired_device_list());
     spinner_device_list.setAdapter(adapter);
@@ -160,13 +169,14 @@ public class MainActivity extends Activity {
     seekBar_angle.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
     	public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser){
     		Log.d(TAG, "progress:" + progress);
-    		send_set_angle((progress / (float)seekBar.getMax() * 2.f - 1.f) * (float)Math.PI); 
+    		protocol.set_angle((progress / (float)seekBar.getMax() * 2.f - 1.f) * (float)Math.PI); 
     	}
     	public void onStartTrackingTouch(SeekBar seekBar) {}
     	public void onStopTrackingTouch(SeekBar seekBar) {}
     });
   }
   
+ 
   boolean connect(String address) {
 	  Log.d(TAG, "connect_to_device: " + address);
 
@@ -201,11 +211,12 @@ public class MainActivity extends Activity {
     // Create a data stream so we can talk to server.
     Log.d(TAG, "...Создание Socket...");
     try {
-    	outStream = btSocket.getOutputStream();
+        protocol = new Protocol(btSocket.getOutputStream());
     	in_stream = btSocket.getInputStream();
     } catch (Exception e) {
-    	outStream = null;
     	in_stream = null;
+    	protocol = null;
+
     	try {
     		btSocket.close();
     	} catch (Exception e2) {}
@@ -222,14 +233,6 @@ public class MainActivity extends Activity {
   
   void close(){
       Log.d(TAG, "close");
-	  if (outStream != null) {
-		  try {
-			  in_stream.close();
-			  outStream.flush();
-		  } catch (Exception e) {
-			  Log.e(TAG, e.getMessage());
-		  }
-	  }
 
       if (btSocket != null ){
 		  try {
@@ -248,12 +251,12 @@ public class MainActivity extends Activity {
     	  }
 
     	  in_stream = null;
-		  outStream = null;
+		  protocol = null;
       }
   }
   
   public void on_button_connect_click(View v) {	
-	  if (outStream == null){
+	  if (protocol == null){
 		  Object obj = spinner_device_list.getSelectedItem();
 		  
 		  if (obj != null) {
@@ -273,17 +276,43 @@ public class MainActivity extends Activity {
   public void on_button_clear_click(View v){
 	  textView_messages.setText("");
   }
-   
+  
+  public void on_button_stop_click(View v){
+	  protocol.set_power_zerro();
+  }
+
+  public void on_button_walk_click(View v){
+	  protocol.start_walk();
+  }
+
+  
   @Override
   public void onResume() {
     super.onResume();
+    
+    if (mAccelerometer != null ) {
+    	mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
+    }
   }
  
   @Override
   public void onPause() {
     super.onPause();
     close();
+    
+    if (mAccelerometer != null )
+    	mSensorManager.unregisterListener(this);
   }
+  
+  public void onAccuracyChanged(Sensor sensor, int accuracy) {
+  }
+
+  public void onSensorChanged(SensorEvent event) {
+      textView_messages.setText("Gx:" + event.values[0] +
+    		  					"\nGy:" + event.values[1] +
+    		  					"\nGz:" + event.values[2]);
+  }
+
    
   private void checkBTState() {
     // Check for Bluetooth support and then check to make sure it is turned on
@@ -299,23 +328,6 @@ public class MainActivity extends Activity {
         startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
       }
     }
-  }
- 
-  private void send_set_angle(float angle) {
-	  Log.d(TAG, "send_set_angle angle:" + angle);
-	  if (outStream != null ) {
-		try {
-			ByteBuffer buffer = ByteBuffer.allocate(100);
-			buffer.order(ByteOrder.LITTLE_ENDIAN);
-			buffer.put((byte)6);
-			buffer.putFloat(angle);
-			outStream.write(buffer.position());
-			outStream.write(buffer.array(), 0, buffer.position());
-			outStream.flush();
-		} catch (IOException e) {
-			Log.e(TAG, e.getMessage());
-		}
-	  }
   }
 }
 

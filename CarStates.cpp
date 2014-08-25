@@ -11,8 +11,8 @@ MoveForwardState::MoveForwardState(Car & car, float _max_power, float _min_dista
 
 void MoveForwardState::start(void * param)
 {
-    car.wheel_left.set_power(-max_power);
-    car.wheel_right.set_power(-max_power);
+    car.wheel_left.set_power(max_power);
+    car.wheel_right.set_power(max_power);
     State::start(param);
 }
 
@@ -54,13 +54,13 @@ void TurnState::start(void * param)
     //поворот на лево.
     if (dir == Left)
     {
-        car.wheel_left.set_power(max_power);
-        car.wheel_right.set_power(-max_power);
+        car.wheel_left.set_power(-max_power);
+        car.wheel_right.set_power(max_power);
     }
     else
     {
-        car.wheel_left.set_power(-max_power);
-        car.wheel_right.set_power(max_power);
+        car.wheel_left.set_power(max_power);
+        car.wheel_right.set_power(-max_power);
     }
     start_time = micros();
     State::start(param);
@@ -102,8 +102,8 @@ void MoveBackState::start(void * param)
 {
     start_time = micros();
     State::start(param);
-    car.wheel_left.set_power(max_power);
-    car.wheel_right.set_power(max_power);
+    car.wheel_left.set_power(-max_power);
+    car.wheel_right.set_power(-max_power);
 }
 
 State::ProcessState MoveBackState::process()
@@ -162,8 +162,6 @@ void TurnAngleState::set_angle(float c_angle)
     direction[0] = cos(angle);
     direction[1] = sin(angle);
 }
-
-
 
 void TurnAngleState::start(void * param)
 {

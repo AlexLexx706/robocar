@@ -33,9 +33,39 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_toLeftOf="@+id/button1"
+            android:layout_toLeftOf="@+id/button_clear"
             android:max="360"
             android:progress="180" />
+
+        <Button
+            android:id="@+id/button_stop"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_below="@+id/seekBar_angle"
+            android:onClick="on_button_stop_click"
+            android:text="@string/stop" />
+
+        <Button
+            android:id="@+id/Button_walk"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignTop="@+id/button_stop"
+            android:layout_toRightOf="@+id/button_stop"
+            android:onClick="on_button_walk_click"
+            android:text="@string/start_walk" />
+
+        <Button
+            android:id="@+id/button_clear"
+            style="?android:attr/buttonStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignBottom="@+id/Button_walk"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/seekBar_angle"
+            android:layout_toRightOf="@+id/Button_walk"
+            android:onClick="on_button_clear_click"
+            android:text="@string/clear" />
 
         <TextView
             android:id="@+id/textView_messages"
@@ -44,19 +74,8 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/button1"
-            android:scrollbars="vertical"
-            android:text="sadf " />
-
-        <Button
-            android:id="@+id/button1"
-            style="?android:attr/buttonStyleSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
-            android:layout_alignParentTop="true"
-            android:onClick="on_button_clear_click"
-            android:text="@string/clear" />
+            android:layout_below="@+id/button_stop"
+            android:scrollbars="vertical" />
 
     </RelativeLayout>
 

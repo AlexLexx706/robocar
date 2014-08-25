@@ -19,9 +19,9 @@ Car::Car():
     max_walk_power(0.5),
     min_distance(20)
 { 
-    move_forward_state = new MoveForwardState(*this, 0.4, 15.f);
-    turn_state = new TurnState(*this,  800000, 15.f, 0.3);
-    move_back_state = new MoveBackState(*this, 800000, 0.3);
+    move_forward_state = new MoveForwardState(*this, 0.8, 15.f);
+    turn_state = new TurnState(*this,  800000, 15.f, 0.7);
+    move_back_state = new MoveBackState(*this, 800000, 0.7);
     turn_angle_state = new TurnAngleState(*this, PI/180. * 160., PI/180. * 4, 0.45, 0.3);
     //turn_angle_state = new TurnAngleState(*this, PI/180. * 120., PI/180. * 4, 1, 0.5);
    
