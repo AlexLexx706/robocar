@@ -1,0 +1,11 @@
+<resources>
+
+    <string name="app_name">Bluetooth1</string>
+    <string name="menu_settings">Settings</string>
+    <string name="title_activity_main">Bluetooth1</string>
+    <string name="set_angle_button">Установить угол</string>
+    <string name="connect">Подключится</string>
+    <string name="disconnect">Отключиться</string>
+    <string name="clear">Очистить</string>
+
+</resources>
