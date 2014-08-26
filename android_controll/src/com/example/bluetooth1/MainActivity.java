@@ -355,13 +355,13 @@ public class MainActivity extends Activity implements SensorEventListener{
 				  last_time = cur_time;
 				  float max_accel = 9.f;
 				  float k = 1.f;
-				  float move_direction = (event.values[0] - base_accel[0]) / max_accel * k;
-				  float angle_direction = (event.values[1] - base_accel[1]) / max_accel * k;
+				  float move_direction = (-1.f) * (event.values[0] - base_accel[0]) / max_accel * k;
+				  float angle_direction = (-1.f) * (event.values[1] - base_accel[1]) / max_accel * k;
 				  
 				  float l_p = move_direction - angle_direction;
 				  float r_p = move_direction + angle_direction;
 			      
-				 //textView_messages.setText("l_p:" + l_p + "\nr_p:" + r_p);
+ 				  //textView_messages.setText("l_p:" + l_p + "\nr_p:" + r_p);
 				  protocol.set_wheels_power(l_p, r_p);
 			  }
 		  }
