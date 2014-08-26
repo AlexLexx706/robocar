@@ -1,10 +1,6 @@
 package com.example.bluetooth1;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -15,18 +11,24 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.res.Configuration;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.SystemClock;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.Spinner;
@@ -51,6 +53,12 @@ public class MainActivity extends Activity implements SensorEventListener{
   private SensorManager mSensorManager;
   private Sensor mAccelerometer;
   private Protocol protocol = null;
+  private CheckBox checkBox_use_accel;
+  private float base_accel[]= new float[]{0,0,0};
+  private boolean first_accel = true;
+  private long last_time = 0;
+  private long accel_dt = 1000/20;
+  
 
   
   public final int MESSAGE_READ = 1;
@@ -133,6 +141,7 @@ public class MainActivity extends Activity implements SensorEventListener{
     button_connect = (Button)findViewById(R.id.button_connect);
     textView_messages = (TextView)findViewById(R.id.textView_messages);
     textView_messages.setMovementMethod(new ScrollingMovementMethod());
+    checkBox_use_accel = (CheckBox)findViewById(R.id.checkBox_use_accel);
 
     btAdapter = BluetoothAdapter.getDefaultAdapter();
     checkBTState();
@@ -173,6 +182,23 @@ public class MainActivity extends Activity implements SensorEventListener{
     	}
     	public void onStartTrackingTouch(SeekBar seekBar) {}
     	public void onStopTrackingTouch(SeekBar seekBar) {}
+    });
+    
+    checkBox_use_accel.setOnCheckedChangeListener(new OnCheckedChangeListener()
+    {
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+        {
+            if ( isChecked )
+            {
+            	//зафиксируем ориентацию
+            	if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            	    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            	} else setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            }
+            else{
+            	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+            }
+        }
     });
   }
   
@@ -233,6 +259,11 @@ public class MainActivity extends Activity implements SensorEventListener{
   
   void close(){
       Log.d(TAG, "close");
+      
+      if (protocol != null) {
+    	  protocol.set_power_zerro();
+    	  setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+      }
 
       if (btSocket != null ){
 		  try {
@@ -269,6 +300,7 @@ public class MainActivity extends Activity implements SensorEventListener{
 		  close();
 		  enableDisableView(controlls, false);
 		  button_connect.setText(getString(R.string.connect));
+		  checkBox_use_accel.setChecked(false);
 	  }
 	  
   }
@@ -278,28 +310,28 @@ public class MainActivity extends Activity implements SensorEventListener{
   }
   
   public void on_button_stop_click(View v){
+	  checkBox_use_accel.setChecked(false);
 	  protocol.set_power_zerro();
   }
 
   public void on_button_walk_click(View v){
 	  protocol.start_walk();
+	  checkBox_use_accel.setChecked(false);
   }
 
   
   @Override
   public void onResume() {
     super.onResume();
-    
-    if (mAccelerometer != null ) {
-    	mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
-    }
+    checkBox_use_accel.setChecked(false);
+    mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
   }
  
   @Override
   public void onPause() {
     super.onPause();
     close();
-    
+   
     if (mAccelerometer != null )
     	mSensorManager.unregisterListener(this);
   }
@@ -308,9 +340,35 @@ public class MainActivity extends Activity implements SensorEventListener{
   }
 
   public void onSensorChanged(SensorEvent event) {
-      textView_messages.setText("Gx:" + event.values[0] +
-    		  					"\nGy:" + event.values[1] +
-    		  					"\nGz:" + event.values[2]);
+	  if ( checkBox_use_accel.isChecked() && protocol != null ) {
+		  if (first_accel) {
+			  base_accel[0] = event.values[0];
+			  base_accel[1] = event.values[1];
+			  base_accel[2] = event.values[2];
+			  first_accel = false;
+			  last_time = SystemClock.elapsedRealtime();
+		  //управление машинкой.
+		  } else {
+			  long cur_time = SystemClock.elapsedRealtime();
+			  
+			  if (cur_time - last_time > accel_dt) {
+				  last_time = cur_time;
+				  float max_accel = 9.f;
+				  float k = 1.f;
+				  float move_direction = (event.values[0] - base_accel[0]) / max_accel * k;
+				  float angle_direction = (event.values[1] - base_accel[1]) / max_accel * k;
+				  
+				  float l_p = move_direction - angle_direction;
+				  float r_p = move_direction + angle_direction;
+			      
+				 //textView_messages.setText("l_p:" + l_p + "\nr_p:" + r_p);
+				  protocol.set_wheels_power(l_p, r_p);
+			  }
+		  }
+	  }
+	  else {
+		  first_accel = true;
+	  }
   }
 
    

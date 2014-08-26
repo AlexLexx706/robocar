@@ -9,5 +9,6 @@
     <string name="clear">Очистить</string>
     <string name="stop">Остановка</string>
     <string name="start_walk">Исследовать</string>
+    <string name="use_accelerometr">Использовать акселерометр</string>
 
 </resources>

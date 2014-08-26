@@ -1,7 +1,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent" >
+    android:layout_height="match_parent"
+    android:keepScreenOn="true">
 
     <Spinner
         android:id="@+id/spinner_device_list"
@@ -33,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
-            android:layout_toLeftOf="@+id/button_clear"
+            android:layout_alignParentRight="true"
             android:max="360"
             android:progress="180" />
 
@@ -67,6 +68,15 @@
             android:onClick="on_button_clear_click"
             android:text="@string/clear" />
 
+        <CheckBox
+            android:id="@+id/checkBox_use_accel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/button_stop"
+            android:text="@string/use_accelerometr" />
+
         <TextView
             android:id="@+id/textView_messages"
             android:layout_width="wrap_content"
@@ -74,7 +84,7 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/button_stop"
+            android:layout_below="@+id/checkBox_use_accel"
             android:scrollbars="vertical" />
 
     </RelativeLayout>
