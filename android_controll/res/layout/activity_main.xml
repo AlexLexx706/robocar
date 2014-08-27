@@ -35,8 +35,8 @@
             android:layout_height="wrap_content"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:max="360"
-            android:progress="180" />
+            android:max="720"
+            android:progress="360" />
 
         <Button
             android:id="@+id/button_stop"
