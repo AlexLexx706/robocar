@@ -17,7 +17,8 @@ Car::Car():
     check_last_time(false),
     enable_walk(false),
     max_walk_power(0.5),
-    min_distance(20)
+    min_distance(20),
+    show_info(false)
 { 
     move_forward_state = new MoveForwardState(*this, 0.8, 15.f);
     turn_state = new TurnState(*this,  800000, 15.f, 0.7);
@@ -44,20 +45,21 @@ void Car::update()
     wheel_left.update();
     wheel_right.update();
     update_distance();
-    
-    /**
-    Serial.print(giro_angles[0]);
-    Serial.print("\t");
-    Serial.print(giro_angles[1]);
-    Serial.print("\t");
-    Serial.print(giro_angles[2]);
-    Serial.print("\tdistanse:");
-    Serial.print(distance_cm);
-    Serial.println("");
-    **/
+
+    if (show_info) {
+        Serial.print("x:");
+        Serial.print(giro_angles[0]);
+        Serial.print(" y:");
+        Serial.print(giro_angles[1]);
+        Serial.print(" z:");
+        Serial.print(giro_angles[2]);
+        Serial.print(" d:");
+        Serial.print(distance_cm);
+        Serial.print("\n");
+    }
+
 
     //потерянна связь с оператором.
-    /**
     if (check_last_time && (micros() > last_cmd_time + 100000) )
     {
         //остановка машины.
@@ -66,7 +68,7 @@ void Car::update()
         check_last_time = false;
     }
     //алгоритм обхода препятствий.
-    else **/if ( enable_walk )
+    else if ( enable_walk )
     {
         State::ProcessState res = cur_state->process();
 
@@ -74,10 +76,6 @@ void Car::update()
         if (res == State::InProgress)
             return;
         
-        //переход к следующему состоянию
-        //Serial.print("res:");
-        //Serial.println(res);
-
         //1. Двигали в перёд.        
         if (cur_state->get_type() == State::MoveForward )
         {
@@ -148,18 +146,24 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     {
         wheel_left.set_power(*((float *)&data[1]));
         enable_walk = false;
-        Serial.print("left_power: ");
-        Serial.print(*((float *)&data[1]));
-        Serial.print("\n");
+
+        if (show_info) {
+            Serial.print("left_power: ");
+            Serial.print(*((float *)&data[1]));
+            Serial.print("\n");
+        }
     }
     //правое колесо
     else if ( data[0] == SetRightWheelPower  && data_size >= 5 )
     {
         wheel_right.set_power(*((float *)&data[1]));
         enable_walk = false;
-        Serial.print("right_power: ");
-        Serial.print(*((float *)&data[1]));
-        Serial.print("\n");
+
+        if (show_info) {
+            Serial.print("right_power: ");
+            Serial.print(*((float *)&data[1]));
+            Serial.print("\n");
+        }
     }
     //оба колеса.
     else if ( data[0] == SetWheelsPower  && data_size >= 9 )
@@ -181,15 +185,18 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     {
         start_walk();
     }
-    else if ( data[0] == SetPidSettings)
+    else if ( data[0] == SetPidSettings )
     {
         struct Params {float p,i,d;};
         Params * p((Params *)&data[1]);
         ((TurnAngleState *)turn_angle_state)->set_params(p->p, p->i, p->d);
     }
-    else if ( data[0] == SetAngle)
+    else if ( data[0] == SetAngle )
     {
         start_rotate(*((float *)&data[1]));
+    }
+    else if ( data[0] == EnableDebug ){
+       show_info = (bool)data[1];
     }
 
     //Запрос времени комманды.
@@ -205,7 +212,6 @@ void Car::start_walk()
     cur_state = move_forward_state;
     cur_state->start(0);
     enable_walk = true;
-    //Serial.println("enable_walk");
 }
 
 void Car::start_rotate(float angle)
@@ -213,7 +219,6 @@ void Car::start_rotate(float angle)
     cur_state = turn_angle_state;
     cur_state->start(&angle);
     enable_walk = true;
-    //Serial.println("enable_walk test");
 }
 
 void Car::update_distance()
@@ -222,7 +227,5 @@ void Car::update_distance()
     {       
         distance_cm = ultrasonic.Ranging(CM);
         ud_start_time = millis();
-        //Serial.print("distance: ");
-        //Serial.println(distance_cm);
-    }
+     }
 }

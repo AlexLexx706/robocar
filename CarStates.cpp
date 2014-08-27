@@ -139,13 +139,15 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
 
 void TurnAngleState::set_params(float p, float i, float d)
 {
-    Serial.print("p:");
-    Serial.print(p, 4);
-    Serial.print(" i:");
-    Serial.print(i, 4);
-    Serial.print(" d:");
-    Serial.print(d, 4);
-    Serial.println("");
+    if (car.show_info) {
+        Serial.print("set_params p:");
+        Serial.print(p, 4);
+        Serial.print(" i:");
+        Serial.print(i, 4);
+        Serial.print(" d:");
+        Serial.print(d, 4);
+        Serial.print("\n");
+    }
   
     delete myPID;
     myPID = new PID(&error, &power, p, i, d);
@@ -154,9 +156,11 @@ void TurnAngleState::set_params(float p, float i, float d)
 
 void TurnAngleState::set_angle(float c_angle)
 {
-    Serial.print("angle:");
-    Serial.print(c_angle, 4);
-    Serial.println("");
+    if (car.show_info) {
+        Serial.print("set_angle angle:");
+        Serial.print(c_angle, 4);
+        Serial.print("\n");
+    }
     
     angle = c_angle;
     direction[0] = cos(angle);
@@ -197,19 +201,19 @@ State::ProcessState TurnAngleState::process()
     error = get_direction();
     myPID->Compute();
     
-    /**
-    Serial.print("c_a:");
-    Serial.print(car.giro_angles[0], 4);
+    if (car.show_info) {
+        Serial.print("c_a:");
+        Serial.print(car.giro_angles[0], 4);
+        
+        Serial.print(" d_a:");
+        Serial.print(angle, 4);
     
-    Serial.print(" d_a:");
-    Serial.print(angle, 4);
-
-    Serial.print(" e_a:");
-    Serial.print(error, 4);
-    Serial.print(" p:");
-    Serial.print(power, 4);
-    Serial.print("\n");
-    **/
+        Serial.print(" e_a:");
+        Serial.print(error, 4);
+        Serial.print(" p:");
+        Serial.print(power, 4);
+        Serial.print("\n");
+    }
 
     if (power >= 0 )
     {

@@ -17,6 +17,7 @@ public class Protocol {
 	private final static byte CMD_StartWalk = 4;
 	private final static byte CMD_SetPidSettings = 5;
 	private final static byte CMD_SetAngle = 6;
+	private final static byte CMD_ENABLE_DEBUG = 7;
 	
 	OutputStream outStream;
 	
@@ -124,6 +125,21 @@ public class Protocol {
 			buffer.order(ByteOrder.LITTLE_ENDIAN);
 			buffer.put(CMD_SetAngle);
 			buffer.putFloat(angle);
+			outStream.write(buffer.position());
+			outStream.write(buffer.array(), 0, buffer.position());
+			outStream.flush();
+		} catch (IOException e) {
+			Log.e(TAG, e.getMessage());
+		}
+	}
+	
+	public void enable_debug(boolean enable) {
+		Log.d(TAG, "ebanle_debug enable:" + enable);
+		try {
+			ByteBuffer buffer = ByteBuffer.allocate(10);
+			buffer.order(ByteOrder.LITTLE_ENDIAN);
+			buffer.put(CMD_ENABLE_DEBUG);
+			buffer.put(enable == true ? (byte)1 : (byte)0);
 			outStream.write(buffer.position());
 			outStream.write(buffer.array(), 0, buffer.position());
 			outStream.flush();

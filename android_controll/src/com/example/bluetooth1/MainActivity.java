@@ -54,6 +54,7 @@ public class MainActivity extends Activity implements SensorEventListener{
   private Sensor mAccelerometer;
   private Protocol protocol = null;
   private CheckBox checkBox_use_accel;
+  private CheckBox mCheckBoxEnableDebug;
   private float base_accel[]= new float[]{0,0,0};
   private boolean first_accel = true;
   private long last_time = 0;
@@ -142,6 +143,7 @@ public class MainActivity extends Activity implements SensorEventListener{
     textView_messages = (TextView)findViewById(R.id.textView_messages);
     textView_messages.setMovementMethod(new ScrollingMovementMethod());
     checkBox_use_accel = (CheckBox)findViewById(R.id.checkBox_use_accel);
+    mCheckBoxEnableDebug = (CheckBox)findViewById(R.id.CheckBox_enable_debug);
 
     btAdapter = BluetoothAdapter.getDefaultAdapter();
     checkBTState();
@@ -200,6 +202,18 @@ public class MainActivity extends Activity implements SensorEventListener{
             }
         }
     });
+    
+    mCheckBoxEnableDebug.setOnCheckedChangeListener(new OnCheckedChangeListener()
+    {
+        public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
+        {
+        	if (protocol != null) {
+        		protocol.enable_debug(isChecked);
+        		
+        	}
+        }
+    });
+    
   }
   
  
@@ -355,8 +369,8 @@ public class MainActivity extends Activity implements SensorEventListener{
 				  last_time = cur_time;
 				  float max_accel = 9.f;
 				  float k = 1.f;
-				  float move_direction = (-1.f) * (event.values[0] - base_accel[0]) / max_accel * k;
-				  float angle_direction = (-1.f) * (event.values[1] - base_accel[1]) / max_accel * k;
+				  float move_direction = (-1.f) * (event.values[0] - base_accel[0]) / max_accel;
+				  float angle_direction = (-1.f) * (event.values[1] - base_accel[1]) / max_accel * 0.5f;
 				  
 				  float l_p = move_direction - angle_direction;
 				  float r_p = move_direction + angle_direction;

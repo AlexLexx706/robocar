@@ -77,6 +77,15 @@
             android:layout_below="@+id/button_stop"
             android:text="@string/use_accelerometr" />
 
+        <CheckBox
+            android:id="@+id/CheckBox_enable_debug"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentRight="true"
+            android:layout_below="@+id/checkBox_use_accel"
+            android:text="@string/enable_debug" />
+
         <TextView
             android:id="@+id/textView_messages"
             android:layout_width="wrap_content"
@@ -84,7 +93,7 @@
             android:layout_alignParentBottom="true"
             android:layout_alignParentLeft="true"
             android:layout_alignParentRight="true"
-            android:layout_below="@+id/checkBox_use_accel"
+            android:layout_below="@+id/CheckBox_enable_debug"
             android:scrollbars="vertical" />
 
     </RelativeLayout>

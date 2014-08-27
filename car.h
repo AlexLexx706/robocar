@@ -9,7 +9,7 @@ class Car
 {
 public:
     //комманды.
-    enum CmdType{SetLeftWheelPower = 0, SetRightWheelPower, SetWheelsPower, SetPowerZerro, StartWalk, SetPidSettings, SetAngle};
+    enum CmdType{SetLeftWheelPower = 0, SetRightWheelPower, SetWheelsPower, SetPowerZerro, StartWalk, SetPidSettings, SetAngle, EnableDebug};
 
     Car();
     ~Car();
@@ -21,7 +21,7 @@ public:
     void start_walk();
     void start_rotate(float angle);
     float giro_angles[3];
-    
+    bool show_info;
 
 private:
     unsigned long ud_start_time;
