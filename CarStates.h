@@ -78,7 +78,7 @@ public:
     virtual void start(void * param);
     virtual ProcessState process();
     float get_direction();
-    void set_params(float p, float i, float d);
+    void set_params(float p, float i, float d, float dt);
     void set_angle(float angle);
     
     

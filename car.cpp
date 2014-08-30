@@ -46,21 +46,34 @@ void Car::update()
     wheel_right.update();
     update_distance();
 
+    /**
     if (show_info) {
         Serial.print("x:");
-        Serial.print(giro_angles[0]);
+        Serial.print(giro_angles[0], 4);
         Serial.print(" y:");
-        Serial.print(giro_angles[1]);
+        Serial.print(giro_angles[1], 4);
         Serial.print(" z:");
-        Serial.print(giro_angles[2]);
+        Serial.print(giro_angles[2], 4);
         Serial.print(" d:");
-        Serial.print(distance_cm);
+        Serial.print(distance_cm, 4);
+        Serial.print(" l_s:");
+        Serial.print(wheel_left.get_speed(), 4);
+        Serial.print(" r_s:");
+        Serial.print(wheel_right.get_speed(), 4);
+        Serial.print("\n");
+    }
+    **/
+    if (show_info) {
+        Serial.print(" l_s:");
+        Serial.print(wheel_left.get_speed(), 4);
+        Serial.print(" r_s:");
+        Serial.print(wheel_right.get_speed(), 4);
         Serial.print("\n");
     }
 
 
     //потерянна связь с оператором.
-    if (check_last_time && (micros() > last_cmd_time + 100000) )
+    if(0)// (check_last_time && (micros() > last_cmd_time + 100000) )
     {
         //остановка машины.
         wheel_left.set_power(0.f);
@@ -77,7 +90,7 @@ void Car::update()
             return;
         
         //1. Двигали в перёд.        
-        if (cur_state->get_type() == State::MoveForward )
+        if (0)//(cur_state->get_type() == State::MoveForward )
         {
             //поворот на лево
             //Serial.println("start turn left");
@@ -187,9 +200,9 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     }
     else if ( data[0] == SetPidSettings )
     {
-        struct Params {float p,i,d;};
+        struct Params {float p,i,d,dt;};
         Params * p((Params *)&data[1]);
-        ((TurnAngleState *)turn_angle_state)->set_params(p->p, p->i, p->d);
+        ((TurnAngleState *)turn_angle_state)->set_params(p->p, p->i, p->d, p->dt);
     }
     else if ( data[0] == SetAngle )
     {
@@ -223,6 +236,7 @@ void Car::start_rotate(float angle)
 
 void Car::update_distance()
 {
+    return;
     if ( millis() > ud_start_time + 100 )
     {       
         distance_cm = ultrasonic.Ranging(CM);

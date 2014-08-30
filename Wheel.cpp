@@ -1,8 +1,8 @@
 #include "Wheel.h"
+#define SPEED_UPDATE_DELAY 250000
 
 Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
 {
-    counter = 0;
     speed_pin = __speed_pin;
     forward_pin = __forward_pin;
     backward_pin = __backward_pin;
@@ -10,9 +10,10 @@ Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
     cur_speed = 0.;
     abs_speed = 0.;
     speed_control = false;
+    counter = NULL;
 
-    pinMode(speed_pin, INPUT);
-    pinMode(A0, INPUT);
+    //pinMode(speed_pin, INPUT);
+    //pinMode(A0, INPUT);
     
     pinMode(forward_pin, OUTPUT);
     pinMode(backward_pin, OUTPUT);
@@ -20,15 +21,13 @@ Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
     digitalWrite(forward_pin, LOW);
     
 
-    state = digitalRead(speed_pin);
+    //state = digitalRead(speed_pin);
     start_time = micros();
     power = 0.f;
 
     for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
         speed_list[i] = 0.;
 }
-
-
 
 void Wheel::set_power(float value)
 {
@@ -85,6 +84,18 @@ void Wheel::update()
 
 void Wheel::update_speed_value()
 {
+    if ( counter != NULL ) {
+        unsigned long cur_time = micros();
+        unsigned long dt = cur_time - start_time;
+
+        //Обновление скорости
+        if ( dt > SPEED_UPDATE_DELAY ) {
+            cur_speed = (dt / 1000000.) * (*counter);
+            *counter = 0;
+            start_time = cur_time;
+        }
+    }
+    /**
     int cur_state = digitalRead(speed_pin);
     unsigned long cur_time = micros();
 
@@ -129,6 +140,7 @@ void Wheel::update_speed_value()
       
         cur_speed = cur_speed / (sizeof(speed_list)/sizeof(speed_list[0]));
     }
+    **/
 }
 
 

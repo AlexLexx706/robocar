@@ -4,6 +4,12 @@
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
+#include <PinChangeInt.h>
+
+#define LEFT_SPEED_COUNTER_PIN 4
+#define RIGHT_SPEED_COUNTER_PIN 10
+uint8_t latest_interrupted_pin;
+uint8_t interrupt_count[20]={0}; // 20 possible arduino pins
 
 static MPU6050 mpu;
 static bool dmpReady = false;  // set true if DMP init was successful
@@ -19,6 +25,13 @@ static Car car;
 static uint8_t buffer[33];
 static uint8_t buffer_size = 0;
 static bool setup_flag = false;
+
+
+void quicfunc() {
+  latest_interrupted_pin=PCintPort::arduinoPin;
+  interrupt_count[latest_interrupted_pin]++;
+};
+
 
 
 void dmpDataReady()
@@ -70,9 +83,19 @@ void setup()
     {
         Serial.begin(115200);
         Serial.println("Connect serial speed=115200!!!"); 
+        
+        //установим прерывания для счётчиков скорости
+        pinMode(LEFT_SPEED_COUNTER_PIN, INPUT); digitalWrite(LEFT_SPEED_COUNTER_PIN, HIGH);
+        PCintPort::attachInterrupt(LEFT_SPEED_COUNTER_PIN, &quicfunc, FALLING);
+
+        pinMode(RIGHT_SPEED_COUNTER_PIN, INPUT); digitalWrite(RIGHT_SPEED_COUNTER_PIN, HIGH);
+        PCintPort::attachInterrupt(RIGHT_SPEED_COUNTER_PIN, &quicfunc, FALLING);
+
 
         car.wheel_left.set_power(0);
         car.wheel_right.set_power(0);
+        car.wheel_left.counter = &interrupt_count[4];
+        car.wheel_right.counter = &interrupt_count[10];
     
         //подключим шину I2C
         Wire.begin();

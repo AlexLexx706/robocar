@@ -1,21 +1,13 @@
 # -*- coding: utf-8 -*-
-
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
-from serial import Serial
-import struct
 import threading
+from protocol import Protocol
 
 
 class MainWindow(QtGui.QMainWindow):
-    CONCRETE = 0
-    BRICK = 1
     add_char = pyqtSignal(str)
     add_line = pyqtSignal(str)
-    CMD_SET_LEFT_WHEEL_POWER = 0
-    CMD_SET_RIGTH_WHEEL_POWER = 1
-    CMD_PID_SETTINGS = 5
-    CMD_ANGLE = 6
     
     KEY_A = 65
     KEY_W = 87
@@ -27,7 +19,11 @@ class MainWindow(QtGui.QMainWindow):
         super(QtGui.QWidget, self).__init__(parent)
         uic.loadUi("main_window.ui", self)
         self.settings = QtCore.QSettings("AlexLexx", "car_controlls")
-        self.serial = None
+        self.protocol = Protocol()
+
+        self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
+        self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
+
         
         self.doubleSpinBox_p.setMaximum(self.doubleSpinBox_max_p.value())
         self.doubleSpinBox_i.setMaximum(self.doubleSpinBox_max_i.value())
@@ -40,17 +36,15 @@ class MainWindow(QtGui.QMainWindow):
         self.doubleSpinBox_max_p.setValue(self.settings.value("max_p", 10).toDouble()[0])
         self.doubleSpinBox_max_i.setValue(self.settings.value("max_i", 10).toDouble()[0])
         self.doubleSpinBox_max_d.setValue(self.settings.value("max_d", 10).toDouble()[0])
-        self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
-
         self.set_p(p)
         self.set_i(i)
         self.set_d(d)
+        self.set_dt(self.settings.value("dt", 0.01).toDouble()[0])
 
         self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
         self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", False).toBool() else QtCore.Qt.Unchecked)
 
-        self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
         self.add_char.connect(self.on_add_char)
         self.add_line.connect(self.on_add_line)
         self.stop_log = False
@@ -95,8 +89,8 @@ class MainWindow(QtGui.QMainWindow):
                     r = -max_speed * rotate_koef
                     l = max_speed * rotate_koef
             
-            self.send_left_wheel_power(l)
-            self.send_right_wheel_power(r)
+            self.protocol.set_left_wheel_power(l)
+            self.protocol.set_right_wheel_power(r)
 
     def is_enable_key_controll(self):
         return self.checkBox_enable_key_controll.isChecked()
@@ -104,6 +98,11 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot(int)
     def on_checkBox_enable_key_controll_stateChanged(self, state):
         self.settings.setValue("enable_key_controll", state == QtCore.Qt.Checked)
+        
+    @pyqtSlot(int)
+    def on_checkBox_enable_debug_stateChanged(self, state):
+        self.settings.setValue("enable_debug", state == QtCore.Qt.Checked)
+        self.protocol.set_enable_debug(state == QtCore.Qt.Checked)
        
     def winEvent(self, message):
         #wm_keydown
@@ -128,16 +127,6 @@ class MainWindow(QtGui.QMainWindow):
         self.plainTextEdit_log.appendPlainText(line)
         
 
-    def send_pid_settings(self):
-        if self.serial is not None:
-            data = struct.pack("<Bfff", self.CMD_PID_SETTINGS, self.get_p(), self.get_i(), self.get_d())
-            self.serial.write(struct.pack("<B", len(data)) + data)
-
-    def send_angle(self, angle):
-        if self.serial is not None:
-            data = struct.pack("<Bf", self.CMD_ANGLE, self.get_angle())
-            self.serial.write(struct.pack("<B", len(data)) + data)
-
     @pyqtSlot()
     def on_pushButton_clear_power_clicked(self):
         self.set_left_wheel_power(0)
@@ -151,7 +140,21 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot("double")
     def on_doubleSpinBox_left_wheel_valueChanged(self, value):
         self.set_left_wheel_power(value)
+        
+    @pyqtSlot("double")
+    def on_doubleSpinBox_dt_valueChanged(self, value):
+        self.set_dt(value)
 
+    def set_dt(self, dt):
+        self.doubleSpinBox_dt.blockSignals(True)
+        self.settings.setValue("dt", dt)
+        self.doubleSpinBox_dt.setValue(dt)
+        self.doubleSpinBox_dt.blockSignals(False)
+        self.send_pid_settings()
+    
+    def get_dt(self):
+        return self.doubleSpinBox_dt.value()
+        
     def set_left_wheel_power(self, value):
         self.doubleSpinBox_left_wheel.blockSignals(True)
         self.horizontalSlider_left_wheel.blockSignals(True)
@@ -162,15 +165,10 @@ class MainWindow(QtGui.QMainWindow):
         self.doubleSpinBox_left_wheel.blockSignals(False)
         self.horizontalSlider_left_wheel.blockSignals(False)
         self.settings.setValue("left_wheel_power", value)
-        self.send_left_wheel_power(value)
+        self.protocol.set_left_wheel_power(value)
 
     def get_left_wheel_power(self):
         return self.doubleSpinBox_left_wheel.value()
-
-    def send_left_wheel_power(self, value):
-        if self.serial is not None:
-            data = struct.pack("<Bf", self.CMD_SET_LEFT_WHEEL_POWER, value)
-            self.serial.write(struct.pack("<B", len(data)) + data)
 
     ##########################################################
     @pyqtSlot("int")
@@ -191,21 +189,15 @@ class MainWindow(QtGui.QMainWindow):
         self.doubleSpinBox_right_wheel.blockSignals(False)
         self.horizontalSlider_right_wheel.blockSignals(False)
         self.settings.setValue("right_wheel_power", value)
-        self.send_right_wheel_power(value)
+        self.protocol.set_right_wheel_power(value)
 
     def get_right_wheel_power(self):
         return self.doubleSpinBox_right_wheel.value()
 
-    def send_right_wheel_power(self, value):
-        if self.serial is not None:
-            data = struct.pack("<Bf", self.CMD_SET_RIGTH_WHEEL_POWER, value)
-            self.serial.write(struct.pack("<B", len(data)) + data)
-
     ######################################################################
     @pyqtSlot()
     def on_pushButton_send_clicked(self):
-        if self.serial is not None:
-            self.serial.write(str(self.lineEdit_text.text()))
+        self.protocol.write(str(self.lineEdit_text.text()))
     
     @pyqtSlot("QString")
     def on_lineEdit_speed_textChanged(self, text):
@@ -213,28 +205,26 @@ class MainWindow(QtGui.QMainWindow):
 
     @pyqtSlot()
     def on_pushButton_connect_clicked(self):
-        if self.serial is None:
-            #self.serial = Serial("COM{}".format(self.spinBox_port_name.value()), 115200, timeout=4)
+        if not self.protocol.is_connected():
             speed = int(self.lineEdit_speed.text())
-            print speed
-            self.serial = Serial("COM{}".format(self.spinBox_port_name.value()), speed, timeout=4)
-            self.stop_log = False
-            self.log_thread = threading.Thread(target=self.log_thread_proc)
-            self.log_thread.start()
-            self.pushButton_connect.setText(u"Отключить")
+
+            if self.protocol.connect("COM{}".format(self.spinBox_port_name.value()), speed):
+                self.stop_log = False
+                self.log_thread = threading.Thread(target=self.log_thread_proc)
+                self.log_thread.start()
+                self.pushButton_connect.setText(u"Отключить")
         else:
             self.pushButton_connect.setText(u"Подключить")
             self.stop_log = True
             self.log_thread.join()
-            self.serial.close()
-            self.serial = None
+            self.protocol.close()
     
     def log_thread_proc(self):
         try:
             print "->"
             line = ""
             while not self.stop_log:
-                s = self.serial.read()
+                s = self.protocol.read()
                 if len(s) > 0:
                     #self.add_char.emit(s)
                     #self.add_line.emit(s)
@@ -275,6 +265,9 @@ class MainWindow(QtGui.QMainWindow):
         self.horizontalSlider_p.blockSignals(False)
         self.settings.setValue("p", value)
         self.send_pid_settings()
+    
+    def send_pid_settings(self):
+        self.protocol.set_pid_settings(self.get_p(), self.get_i(), self.get_d(), self.get_dt())
 
     @pyqtSlot("int")
     def on_horizontalSlider_i_valueChanged(self, value):
@@ -353,4 +346,4 @@ class MainWindow(QtGui.QMainWindow):
         self.dial_angle.blockSignals(False)
         
         self.settings.setValue("angle", angle)
-        self.send_angle(angle)
+        self.protocol.set_angle(angle)

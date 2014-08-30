@@ -5,10 +5,10 @@
 class PID
 {
 public:
-    PID(double * error, double * power, double p, double i, double d);
+    PID(double * error, double * power, double p, double i, double d, double _dt);
     void Compute();
     void SetOutputLimits(double min, double max);
-    void SetTunings( double p, double i, double d);
+    void SetTunings( double p, double i, double d, double dt);
 private:
     double kp;
     double ki;
@@ -17,6 +17,7 @@ private:
     double * output;
     double  prew_error;
     double ci;
+    double dt;
     bool first;
 
     unsigned long prew_time;
