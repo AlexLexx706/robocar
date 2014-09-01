@@ -130,14 +130,16 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     set_point(0.f),
     error(0.f),
     power(0.f),
-    myPID(new PID(&error, &power, 2, 0, 0.35, 0.01))
+    myPID(new PID(&error, &power, 2, 0, 0.35)),
+    power_offset(0.)
+    
 {
     myPID->SetOutputLimits(-1, 1);
     direction[0] = 0.f;
     direction[1] = 1.f;
 }
 
-void TurnAngleState::set_params(float p, float i, float d, float dt)
+void TurnAngleState::set_params(float p, float i, float d)
 {
     if (car.show_info) {
         Serial.print("set_params p:");
@@ -146,14 +148,12 @@ void TurnAngleState::set_params(float p, float i, float d, float dt)
         Serial.print(i, 4);
         Serial.print(" d:");
         Serial.print(d, 4);
-        Serial.print(" dt:");
-        Serial.print(dt, 4);
         Serial.print("\n");
         
     }
   
     delete myPID;
-    myPID = new PID(&error, &power, p, i, d, dt);
+    myPID = new PID(&error, &power, p, i, d);
     myPID->SetOutputLimits(-1, 1);
 }
 
@@ -168,6 +168,11 @@ void TurnAngleState::set_angle(float c_angle)
     angle = c_angle;
     direction[0] = cos(angle);
     direction[1] = sin(angle);
+}
+
+void TurnAngleState::set_offset(float offset)
+{
+    power_offset = offset;
 }
 
 void TurnAngleState::start(void * param)
@@ -203,31 +208,16 @@ State::ProcessState TurnAngleState::process()
     //рассчёт угла и направления поворота.
     error = get_direction();
     myPID->Compute();
-    
-    if (0) {//(car.show_info) {
-        Serial.print("c_a:");
-        Serial.print(car.giro_angles[0], 4);
-        
-        Serial.print(" d_a:");
-        Serial.print(angle, 4);
-    
-        Serial.print(" e_a:");
-        Serial.print(error, 4);
-        Serial.print(" p:");
-        Serial.print(power, 4);
-        Serial.print("\n");
-    }
-
     if (power >= 0 )
     {
-        car.wheel_left.set_power(-power);
-        car.wheel_right.set_power(power);
+        car.wheel_left.set_power(-power + power_offset);
+        car.wheel_right.set_power(power + power_offset);
         return InProgress;
     }
     else
     {
-        car.wheel_left.set_power(-power);
-        car.wheel_right.set_power(power);
+        car.wheel_left.set_power(-power + power_offset);
+        car.wheel_right.set_power(power + power_offset);
         return InProgress;
     }
 }

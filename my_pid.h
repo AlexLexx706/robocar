@@ -1,14 +1,13 @@
-#ifndef PID_v2_h
-#define PID_v2_h
-#define LIBRARY_VERSION	1.0.0
+#ifndef MY_PID_h
+#define MY_PID_h
 
 class PID
 {
 public:
-    PID(double * error, double * power, double p, double i, double d, double _dt);
+    PID(double * error, double * power, double p, double i, double d);
     void Compute();
     void SetOutputLimits(double min, double max);
-    void SetTunings( double p, double i, double d, double dt);
+    void SetTunings(double p, double i, double d);
 private:
     double kp;
     double ki;
@@ -17,7 +16,6 @@ private:
     double * output;
     double  prew_error;
     double ci;
-    double dt;
     bool first;
 
     unsigned long prew_time;

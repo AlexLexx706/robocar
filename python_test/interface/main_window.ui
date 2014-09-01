@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>589</width>
-    <height>671</height>
+    <width>981</width>
+    <height>835</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -34,6 +34,48 @@
         <property name="frameShadow">
          <enum>QFrame::Raised</enum>
         </property>
+        <layout class="QGridLayout" name="gridLayout_9">
+         <item row="2" column="1">
+          <widget class="QPushButton" name="pushButton_send">
+           <property name="text">
+            <string>послать</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" rowspan="3">
+          <widget class="QPlainTextEdit" name="plainTextEdit_log">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+           <property name="centerOnScroll">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLineEdit" name="lineEdit_text"/>
+         </item>
+         <item row="3" column="1">
+          <widget class="QPushButton" name="pushButton_clear">
+           <property name="text">
+            <string>очистить</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <spacer name="verticalSpacer_2">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>471</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
        </widget>
        <widget class="QGroupBox" name="groupBox_settings">
         <property name="title">
@@ -170,9 +212,33 @@
          <item row="5" column="1">
           <widget class="QGroupBox" name="groupBox_2">
            <property name="title">
-            <string>Коэффициенты:</string>
+            <string>Коэффициенты PID:</string>
            </property>
            <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QRadioButton" name="radioButton_angle">
+              <property name="text">
+               <string>Угол</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioButton_left_wheel">
+              <property name="text">
+               <string>Скорость левого колеса</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioButton_right_wheel">
+              <property name="text">
+               <string>Скорость правого колеса</string>
+              </property>
+             </widget>
+            </item>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_2">
               <item>
@@ -193,6 +259,9 @@
                 <property name="maximum">
                  <number>1000</number>
                 </property>
+                <property name="pageStep">
+                 <number>10</number>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -206,39 +275,14 @@
                 <property name="decimals">
                  <number>3</number>
                 </property>
-                <property name="maximum">
-                 <double>20.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.001000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_max_p">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;максисум&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="decimals">
-                 <number>3</number>
-                </property>
                 <property name="minimum">
-                 <double>1.000000000000000</double>
+                 <double>-5.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>20.000000000000000</double>
+                 <double>5.000000000000000</double>
                 </property>
                 <property name="singleStep">
                  <double>0.001000000000000</double>
-                </property>
-                <property name="value">
-                 <double>2.000000000000000</double>
                 </property>
                </widget>
               </item>
@@ -258,6 +302,9 @@
                 <property name="maximum">
                  <number>1000</number>
                 </property>
+                <property name="pageStep">
+                 <number>10</number>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -271,39 +318,14 @@
                 <property name="decimals">
                  <number>3</number>
                 </property>
-                <property name="maximum">
-                 <double>20.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.001000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_max_i">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;максисум&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="decimals">
-                 <number>3</number>
-                </property>
                 <property name="minimum">
-                 <double>1.000000000000000</double>
+                 <double>-5.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>20.000000000000000</double>
+                 <double>5.000000000000000</double>
                 </property>
                 <property name="singleStep">
                  <double>0.001000000000000</double>
-                </property>
-                <property name="value">
-                 <double>2.000000000000000</double>
                 </property>
                </widget>
               </item>
@@ -323,6 +345,9 @@
                 <property name="maximum">
                  <number>1000</number>
                 </property>
+                <property name="pageStep">
+                 <number>10</number>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -336,91 +361,14 @@
                 <property name="decimals">
                  <number>3</number>
                 </property>
-                <property name="maximum">
-                 <double>20.000000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.001000000000000</double>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_max_d">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;максисум&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="decimals">
-                 <number>3</number>
-                </property>
                 <property name="minimum">
-                 <double>1.000000000000000</double>
+                 <double>-5.000000000000000</double>
                 </property>
                 <property name="maximum">
-                 <double>20.000000000000000</double>
+                 <double>5.000000000000000</double>
                 </property>
                 <property name="singleStep">
                  <double>0.001000000000000</double>
-                </property>
-                <property name="value">
-                 <double>2.000000000000000</double>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_5">
-              <item>
-               <spacer name="horizontalSpacer_3">
-                <property name="orientation">
-                 <enum>Qt::Horizontal</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>40</width>
-                  <height>20</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_6">
-                <property name="text">
-                 <string>DT:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QDoubleSpinBox" name="doubleSpinBox_dt">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;максисум&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                </property>
-                <property name="decimals">
-                 <number>3</number>
-                </property>
-                <property name="minimum">
-                 <double>0.000000000000000</double>
-                </property>
-                <property name="maximum">
-                 <double>0.100000000000000</double>
-                </property>
-                <property name="singleStep">
-                 <double>0.001000000000000</double>
-                </property>
-                <property name="value">
-                 <double>0.010000000000000</double>
                 </property>
                </widget>
               </item>
@@ -525,6 +473,53 @@
               </property>
              </widget>
             </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_6">
+              <item>
+               <widget class="QLabel" name="label_7">
+                <property name="text">
+                 <string>Смещение:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="horizontalSlider_offset">
+                <property name="maximum">
+                 <number>1000</number>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksAbove</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QDoubleSpinBox" name="doubleSpinBox_offset">
+                <property name="decimals">
+                 <number>4</number>
+                </property>
+                <property name="minimum">
+                 <double>-1.000000000000000</double>
+                </property>
+                <property name="maximum">
+                 <double>1.000000000000000</double>
+                </property>
+                <property name="singleStep">
+                 <double>0.010000000000000</double>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="pushButton_stop">
+                <property name="text">
+                 <string>Стоп</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
            </layout>
           </widget>
          </item>
@@ -546,6 +541,66 @@
            <property name="text">
             <string>Разрешить отладку</string>
            </property>
+          </widget>
+         </item>
+         <item row="7" column="0" colspan="2">
+          <widget class="QGroupBox" name="groupBox_9">
+           <property name="title">
+            <string>GroupBox</string>
+           </property>
+           <layout class="QVBoxLayout" name="verticalLayout_7">
+            <item>
+             <widget class="QRadioButton" name="radioButton_left_wheel_speed">
+              <property name="text">
+               <string>Скорость левого колеса</string>
+              </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="radioButton_right_wheel_speed">
+              <property name="text">
+               <string>Скорость правого колеса</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_15">
+              <item>
+               <widget class="QLabel" name="label_17">
+                <property name="text">
+                 <string>Скорость:</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSlider" name="horizontalSlider_speed">
+                <property name="minimum">
+                 <number>16</number>
+                </property>
+                <property name="maximum">
+                 <number>240</number>
+                </property>
+                <property name="pageStep">
+                 <number>10</number>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="tickPosition">
+                 <enum>QSlider::TicksAbove</enum>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+           <zorder>label_17</zorder>
+           <zorder>layoutWidget</zorder>
+           <zorder>radioButton_left_wheel_speed</zorder>
+           <zorder>radioButton_right_wheel_speed</zorder>
           </widget>
          </item>
         </layout>
@@ -570,48 +625,7 @@
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
-       <layout class="QGridLayout" name="gridLayout_3">
-        <item row="2" column="1">
-         <spacer name="verticalSpacer_2">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item row="1" column="1">
-         <widget class="QPushButton" name="pushButton_clear">
-          <property name="text">
-           <string>очистить</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0" rowspan="2">
-         <widget class="QPlainTextEdit" name="plainTextEdit_log">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="centerOnScroll">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLineEdit" name="lineEdit_text"/>
-        </item>
-        <item row="0" column="1">
-         <widget class="QPushButton" name="pushButton_send">
-          <property name="text">
-           <string>послать</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
+       <layout class="QGridLayout" name="gridLayout_3"/>
       </widget>
      </widget>
     </item>
@@ -622,7 +636,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>589</width>
+     <width>981</width>
      <height>21</height>
     </rect>
    </property>

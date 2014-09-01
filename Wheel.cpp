@@ -1,38 +1,30 @@
 #include "Wheel.h"
-#define SPEED_UPDATE_DELAY 250000
+const int Wheel::Wheel::min_speed = 240;
+const int Wheel::Wheel::max_speed = 10;
 
-Wheel::Wheel(int __speed_pin, int __forward_pin, int __backward_pin)
+Wheel::Wheel(int __forward_pin, int __backward_pin):
+    speed(min_speed),
+    last_time(millis()),
+    pid(&error, &pid_power, 2, 0, 0.35),
+    speed_control(false),
+    forward_pin(__forward_pin),
+    backward_pin(__backward_pin),
+    power(0.0),
+    abs_speed(30),
+    pid_power(0.0),
+    error(0.0)
 {
-    speed_pin = __speed_pin;
-    forward_pin = __forward_pin;
-    backward_pin = __backward_pin;
-    speed_list_index = 0;;
-    cur_speed = 0.;
-    abs_speed = 0.;
-    speed_control = false;
-    counter = NULL;
-
-    //pinMode(speed_pin, INPUT);
-    //pinMode(A0, INPUT);
-    
+    pid.SetOutputLimits(0,1);
     pinMode(forward_pin, OUTPUT);
     pinMode(backward_pin, OUTPUT);
     digitalWrite(backward_pin, LOW);
     digitalWrite(forward_pin, LOW);
-    
-
-    //state = digitalRead(speed_pin);
-    start_time = micros();
-    power = 0.f;
-
-    for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
-        speed_list[i] = 0.;
 }
 
-void Wheel::set_power(float value)
+void Wheel::set_power(double value)
 {
-    if (value > 1.f )
-        value = 1.f;
+    if (value > 1. )
+        value = 1.;
     else if (value < -1.0)
         value = -1.0;
 
@@ -40,7 +32,7 @@ void Wheel::set_power(float value)
     {
         power = value;
 
-        if ( value > 0.f )
+        if ( value > 0. )
         {
             analogWrite(forward_pin, int(value * 255));
             digitalWrite(backward_pin, LOW);
@@ -62,85 +54,29 @@ void Wheel::set_power(float value)
 void Wheel::update()
 {
     update_speed_value();
+    error = get_speed() - abs_speed;
 
     if ( speed_control )
-    {
-        if ( get_speed() > get_abs_speed() )
-        {
-           float value = get_power() - 0.0001;
-    
-           if (value < 0.0)
-           {
-               value = 0.0f;
-           }
-           set_power(value);
-        }
-        else
-        {
-           set_power(get_power() + 0.0001);
-        }
+    {  
+        pid.Compute();
+        //Serial.print(" error:");
+        //Serial.print(error);
+        //Serial.print(" power:");
+        //Serial.print(pid_power);
+        //Serial.print("\n");
+        set_power(pid_power);
     }
 }
 
 void Wheel::update_speed_value()
 {
-    if ( counter != NULL ) {
-        unsigned long cur_time = micros();
-        unsigned long dt = cur_time - start_time;
+    if (get_speed() < min_speed ){
+        unsigned long cur_time = millis();
 
-        //Обновление скорости
-        if ( dt > SPEED_UPDATE_DELAY ) {
-            cur_speed = (dt / 1000000.) * (*counter);
-            *counter = 0;
-            start_time = cur_time;
+        if (cur_time - get_last_time() > min_speed){
+            set_speed(min_speed);
         }
     }
-    /**
-    int cur_state = digitalRead(speed_pin);
-    unsigned long cur_time = micros();
-
-    if ( state != cur_state )
-    {
-        if ( state == HIGH && cur_state == LOW )
-        {
-            counter++;
-            
-            //рассчёт скорости
-            unsigned long dt = cur_time - start_time;
-            start_time = cur_time;
-             
-            speed_list[speed_list_index] = 1000000./dt;
-            speed_list_index++;
-            speed_list_index %= (sizeof(speed_list)/sizeof(speed_list[0]));
-            
-            cur_speed = 0.f;
-            
-            for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
-               cur_speed += speed_list[i];
-          
-            cur_speed = cur_speed / (sizeof(speed_list)/sizeof(speed_list[0]));
-        }
-        
-        state = cur_state;
-    }
-
-    //считаем что скорость 0
-    if (cur_time > start_time + 10000 )
-    {
-        speed_list[speed_list_index] = 0;
-        start_time = cur_time;
-
-        speed_list_index++;
-        speed_list_index %= (sizeof(speed_list)/sizeof(speed_list[0]));
-        
-        cur_speed = 0.f;
-        
-        for (int i = 0; i < sizeof(speed_list)/sizeof(speed_list[0]); i++ )
-           cur_speed += speed_list[i];
-      
-        cur_speed = cur_speed / (sizeof(speed_list)/sizeof(speed_list[0]));
-    }
-    **/
 }
 
 

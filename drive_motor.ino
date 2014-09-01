@@ -8,8 +8,8 @@
 
 #define LEFT_SPEED_COUNTER_PIN 4
 #define RIGHT_SPEED_COUNTER_PIN 10
+
 uint8_t latest_interrupted_pin;
-uint8_t interrupt_count[20]={0}; // 20 possible arduino pins
 
 static MPU6050 mpu;
 static bool dmpReady = false;  // set true if DMP init was successful
@@ -27,11 +27,19 @@ static uint8_t buffer_size = 0;
 static bool setup_flag = false;
 
 
-void quicfunc() {
-  latest_interrupted_pin=PCintPort::arduinoPin;
-  interrupt_count[latest_interrupted_pin]++;
+void update_left_wheel() {
+    latest_interrupted_pin=PCintPort::arduinoPin;
+    unsigned long cur_time = millis();
+    car.wheel_left.speed = cur_time - car.wheel_left.last_time;
+    car.wheel_left.last_time = cur_time;
 };
 
+void update_right_wheel() {
+    latest_interrupted_pin=PCintPort::arduinoPin;
+    unsigned long cur_time = millis();
+    car.wheel_right.speed = cur_time - car.wheel_right.last_time;
+    car.wheel_right.last_time = cur_time;
+};
 
 
 void dmpDataReady()
@@ -86,16 +94,14 @@ void setup()
         
         //установим прерывания для счётчиков скорости
         pinMode(LEFT_SPEED_COUNTER_PIN, INPUT); digitalWrite(LEFT_SPEED_COUNTER_PIN, HIGH);
-        PCintPort::attachInterrupt(LEFT_SPEED_COUNTER_PIN, &quicfunc, FALLING);
+        PCintPort::attachInterrupt(LEFT_SPEED_COUNTER_PIN, &update_left_wheel, FALLING);
 
         pinMode(RIGHT_SPEED_COUNTER_PIN, INPUT); digitalWrite(RIGHT_SPEED_COUNTER_PIN, HIGH);
-        PCintPort::attachInterrupt(RIGHT_SPEED_COUNTER_PIN, &quicfunc, FALLING);
+        PCintPort::attachInterrupt(RIGHT_SPEED_COUNTER_PIN, &update_right_wheel, FALLING);
 
 
         car.wheel_left.set_power(0);
         car.wheel_right.set_power(0);
-        car.wheel_left.counter = &interrupt_count[4];
-        car.wheel_right.counter = &interrupt_count[10];
     
         //подключим шину I2C
         Wire.begin();

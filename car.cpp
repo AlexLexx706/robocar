@@ -10,8 +10,8 @@
 Car::Car():
     ud_start_time(millis()),
     distance_cm(0.f),
-    wheel_left(4, 3, 5),
-    wheel_right(A1, 6, 9),
+    wheel_left(3, 5),
+    wheel_right(6, 9),
     ultrasonic(7, 8),
     last_cmd_time(0),
     check_last_time(false),
@@ -63,11 +63,13 @@ void Car::update()
         Serial.print("\n");
     }
     **/
-    if (show_info) {
+    if (0){//(show_info) {
         Serial.print(" l_s:");
-        Serial.print(wheel_left.get_speed(), 4);
+        //Serial.print(wheel_left.get_speed(), 4);
+        Serial.print(wheel_left.get_speed());
         Serial.print(" r_s:");
-        Serial.print(wheel_right.get_speed(), 4);
+        //Serial.print(wheel_right.get_speed(), 4);
+        Serial.print(wheel_right.get_speed());
         Serial.print("\n");
     }
 
@@ -200,16 +202,66 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     }
     else if ( data[0] == SetPidSettings )
     {
-        struct Params {float p,i,d,dt;};
-        Params * p((Params *)&data[1]);
-        ((TurnAngleState *)turn_angle_state)->set_params(p->p, p->i, p->d, p->dt);
+        struct Params{
+          byte id;
+          float p,i,d;
+        } * params((Params *)&data[1]);
+
+        Serial.print("SetPidSettings id:");
+        Serial.print(params->id);
+        Serial.print(" p:");
+        Serial.print(params->p);
+        Serial.print(" i:");
+        Serial.print(params->i);
+        Serial.print(" d:");
+        Serial.print(params->d);
+        Serial.print("\n");
+
+
+        //установка пида угла
+        if (params->id == 0){
+            ((TurnAngleState *)turn_angle_state)->set_params(params->p, params->i, params->d);
+        //установка пида левого колеса
+        }else if (params->id == 1){
+            wheel_left.pid.SetTunings(params->p, params->i, params->d);
+            wheel_left.speed_control = true;
+        //установка пида правого колеса
+        }else if (params->id == 2){
+            wheel_right.pid.SetTunings(params->p, params->i, params->d);
+            wheel_right.speed_control = true;
+        }
     }
     else if ( data[0] == SetAngle )
     {
         start_rotate(*((float *)&data[1]));
     }
+    else if ( data[0] == SetPowerOffset ){
+        ((TurnAngleState *)turn_angle_state)->set_offset(*((float *)&data[1]));
+    }
     else if ( data[0] == EnableDebug ){
        show_info = (bool)data[1];
+    }
+    else if ( data[0] == SetWheelSpeed )
+    {
+        struct Params{
+          byte id;
+          long speed;
+        } * params((Params *)&data[1]);
+
+        Serial.print("SetWheelSpeed id:");
+        Serial.print(params->id);
+        Serial.print(" speed:");
+        Serial.print(params->speed);
+        Serial.print("\n");
+
+        if (params->id == 0){
+            wheel_left.set_abs_speed(params->speed);
+            wheel_left.speed_control = true;
+        //установка пида правого колеса
+        }else if (params->id == 1){
+            wheel_right.set_abs_speed(params->speed);
+            wheel_right.speed_control = true;
+        }
     }
 
     //Запрос времени комманды.

@@ -24,22 +24,13 @@ class MainWindow(QtGui.QMainWindow):
         self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
 
-        
-        self.doubleSpinBox_p.setMaximum(self.doubleSpinBox_max_p.value())
-        self.doubleSpinBox_i.setMaximum(self.doubleSpinBox_max_i.value())
-        self.doubleSpinBox_d.setMaximum(self.doubleSpinBox_max_d.value())
         self.set_angle(self.settings.value("angle", 0).toDouble()[0])
-        p = self.settings.value("p", 0).toDouble()[0]
-        i = self.settings.value("i", 0).toDouble()[0]
-        d = self.settings.value("d", 0).toDouble()[0]
+       
+        self.set_p(self.settings.value("p", 2).toDouble()[0])
+        self.set_i(self.settings.value("i", 0).toDouble()[0])
+        self.set_d(self.settings.value("d", 0.3).toDouble()[0])
         
-        self.doubleSpinBox_max_p.setValue(self.settings.value("max_p", 10).toDouble()[0])
-        self.doubleSpinBox_max_i.setValue(self.settings.value("max_i", 10).toDouble()[0])
-        self.doubleSpinBox_max_d.setValue(self.settings.value("max_d", 10).toDouble()[0])
-        self.set_p(p)
-        self.set_i(i)
-        self.set_d(d)
-        self.set_dt(self.settings.value("dt", 0.01).toDouble()[0])
+        self.set_offset(self.settings.value("offset", 0).toDouble()[0])
 
         self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
@@ -140,21 +131,7 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot("double")
     def on_doubleSpinBox_left_wheel_valueChanged(self, value):
         self.set_left_wheel_power(value)
-        
-    @pyqtSlot("double")
-    def on_doubleSpinBox_dt_valueChanged(self, value):
-        self.set_dt(value)
 
-    def set_dt(self, dt):
-        self.doubleSpinBox_dt.blockSignals(True)
-        self.settings.setValue("dt", dt)
-        self.doubleSpinBox_dt.setValue(dt)
-        self.doubleSpinBox_dt.blockSignals(False)
-        self.send_pid_settings()
-    
-    def get_dt(self):
-        return self.doubleSpinBox_dt.value()
-        
     def set_left_wheel_power(self, value):
         self.doubleSpinBox_left_wheel.blockSignals(True)
         self.horizontalSlider_left_wheel.blockSignals(True)
@@ -239,89 +216,116 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot("int")
     def on_spinBox_port_name_valueChanged(self, value):
         self.settings.setValue("port", value)
+    
+    def get_value(self, slider, spin_box):
+        return slider.value() / float(slider.maximum()) * (spin_box.maximum() - spin_box.minimum()) + spin_box.minimum()
+    
+    def set_value(self, slider, spin_box, value):
+        spin_box.blockSignals(True)
+        slider.blockSignals(True)
+        spin_box.setValue(value)
+        slider.setValue((value - spin_box.minimum()) / (spin_box.maximum() - spin_box.minimum()) * slider.maximum())
+        spin_box.blockSignals(False)
+        slider.blockSignals(False)
+
+        
+    def get_pid_type(self):
+        if self.radioButton_angle.isChecked():
+            return 0
             
+        if self.radioButton_left_wheel.isChecked():
+            return 1
+        
+        if self.radioButton_right_wheel.isChecked():
+            return 2
+        
+    def set_pid_type(self, pid_type):
+        if pid_type == 0:
+            self.radioButton_angle.setChecked(True)
+        elif pid_type == 1:
+            self.radioButton_left_wheel.setChecked(True)
+        elif pid_type == 2:
+            self.radioButton_right_wheel.setChecked(True)
+
+        
     @pyqtSlot("int")
     def on_horizontalSlider_p_valueChanged(self, value):
-        self.set_p(value / float(self.horizontalSlider_p.maximum()) * self.doubleSpinBox_max_p.value())
+        self.set_p(self.get_value(self.horizontalSlider_p, self.doubleSpinBox_p))
     
     @pyqtSlot("double")
     def on_doubleSpinBox_p_valueChanged(self, value):
         self.set_p(value)
-    
-    @pyqtSlot("double")
-    def on_doubleSpinBox_max_p_valueChanged(self, value):
-        self.doubleSpinBox_p.setMaximum(value)
-        self.settings.setValue("max_p", value)
         
     def get_p(self):
         return self.doubleSpinBox_p.value()
     
     def set_p(self, value):
-        self.doubleSpinBox_p.blockSignals(True)
-        self.horizontalSlider_p.blockSignals(True)
-        self.doubleSpinBox_p.setValue(value)
-        self.horizontalSlider_p.setValue(value / self.doubleSpinBox_max_p.value() * self.horizontalSlider_p.maximum())
-        self.doubleSpinBox_p.blockSignals(False)
-        self.horizontalSlider_p.blockSignals(False)
+        self.set_value(self.horizontalSlider_p, self.doubleSpinBox_p, value)
         self.settings.setValue("p", value)
         self.send_pid_settings()
     
     def send_pid_settings(self):
-        self.protocol.set_pid_settings(self.get_p(), self.get_i(), self.get_d(), self.get_dt())
+        self.protocol.set_pid_settings(self.get_pid_type(), self.get_p(), self.get_i(), self.get_d())
 
     @pyqtSlot("int")
     def on_horizontalSlider_i_valueChanged(self, value):
-        self.set_i(value / float(self.horizontalSlider_i.maximum()) * self.doubleSpinBox_max_i.value())
+        self.set_i(self.get_value(self.horizontalSlider_i, self.doubleSpinBox_i))
     
     @pyqtSlot("double")
     def on_doubleSpinBox_i_valueChanged(self, value):
         self.set_i(value)
-    
-    @pyqtSlot("double")
-    def on_doubleSpinBox_max_i_valueChanged(self, value):
-        self.doubleSpinBox_i.setMaximum(value)
-        self.settings.setValue("max_i", value)
         
     def get_i(self):
         return self.doubleSpinBox_i.value()
     
     def set_i(self, value):
-        self.doubleSpinBox_i.blockSignals(True)
-        self.horizontalSlider_i.blockSignals(True)
-        self.doubleSpinBox_i.setValue(value)
-        self.horizontalSlider_i.setValue(value / self.doubleSpinBox_max_i.value() * self.horizontalSlider_i.maximum())
-        self.doubleSpinBox_i.blockSignals(False)
-        self.horizontalSlider_i.blockSignals(False)
+        self.set_value(self.horizontalSlider_i, self.doubleSpinBox_i, value)
         self.settings.setValue("i", value)
         self.send_pid_settings()
         
-        
     @pyqtSlot("int")
     def on_horizontalSlider_d_valueChanged(self, value):
-        self.set_d(value / float(self.horizontalSlider_d.maximum()) * self.doubleSpinBox_max_d.value())
+        self.set_d(self.get_value(self.horizontalSlider_d, self.doubleSpinBox_d))
     
     @pyqtSlot("double")
     def on_doubleSpinBox_d_valueChanged(self, value):
         self.set_d(value)
-    
-    @pyqtSlot("double")
-    def on_doubleSpinBox_max_d_valueChanged(self, value):
-        self.doubleSpinBox_d.setMaximum(value)
-        self.settings.setValue("max_d", value)
-        
+
     def get_d(self):
         return self.doubleSpinBox_d.value()
     
     def set_d(self, value):
-        self.doubleSpinBox_d.blockSignals(True)
-        self.horizontalSlider_d.blockSignals(True)
-        self.doubleSpinBox_d.setValue(value)
-        self.horizontalSlider_d.setValue(value / self.doubleSpinBox_max_d.value() * self.horizontalSlider_d.maximum())
-        self.doubleSpinBox_d.blockSignals(False)
-        self.horizontalSlider_d.blockSignals(False)
+        self.set_value(self.horizontalSlider_d, self.doubleSpinBox_d, value)
         self.settings.setValue("d", value)
         self.send_pid_settings()
+    
+    @pyqtSlot("int")
+    def on_horizontalSlider_offset_valueChanged(self, value):
+        self.set_offset(value/float(self.horizontalSlider_offset.maximum()) * 2 - 1.0);
+
+    @pyqtSlot("double")
+    def on_doubleSpinBox_offset_valueChanged(self, value):
+        self.set_offset(value)
+    
+    def set_offset(self, value):
+        self.horizontalSlider_offset.blockSignals(True)
+        self.doubleSpinBox_offset.blockSignals(True)
+        self.horizontalSlider_offset.setValue((value + 1)/2. * self.horizontalSlider_offset.maximum())
+        self.doubleSpinBox_offset.setValue(value)
+        self.doubleSpinBox_offset.blockSignals(False)
+        self.horizontalSlider_offset.blockSignals(False)
+        self.settings.setValue("offset", value)
+        self.protocol.set_offset(value)
+    
+    def get_offset(self):
+        return self.doubleSpinBox_offset.value()
+    
+    @pyqtSlot()
+    def on_pushButton_stop_clicked(self):
+        self.set_offset(0)
         
+        
+    
     @pyqtSlot("int")
     def on_dial_angle_valueChanged(self, value):
         value = value / float(self.dial_angle.maximum())
@@ -347,3 +351,12 @@ class MainWindow(QtGui.QMainWindow):
         
         self.settings.setValue("angle", angle)
         self.protocol.set_angle(angle)
+    
+    def get_wheel_id(self):
+        if self.radioButton_left_wheel_speed.isChecked():
+            return 0
+        return 1
+    
+    @pyqtSlot("int")
+    def on_horizontalSlider_speed_valueChanged(self, value):
+        self.protocol.set_wheel_speed(self.get_wheel_id(), value)

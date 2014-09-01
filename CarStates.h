@@ -78,8 +78,9 @@ public:
     virtual void start(void * param);
     virtual ProcessState process();
     float get_direction();
-    void set_params(float p, float i, float d, float dt);
+    void set_params(float p, float i, float d);
     void set_angle(float angle);
+    void set_offset(float offset);
     
     
 private:
@@ -88,6 +89,7 @@ private:
     double set_point;
     double error;
     double power;
+    double power_offset;
     PID * myPID;
 };
 

@@ -2,6 +2,7 @@
 #define ALEX_CAR_H
 #include "Wheel.h"
 #include "Ultrasonic.h"
+#include "my_pid.h"
 
 class State;
 
@@ -9,7 +10,16 @@ class Car
 {
 public:
     //комманды.
-    enum CmdType{SetLeftWheelPower = 0, SetRightWheelPower, SetWheelsPower, SetPowerZerro, StartWalk, SetPidSettings, SetAngle, EnableDebug};
+    enum CmdType{SetLeftWheelPower = 0,
+                 SetRightWheelPower,
+                 SetWheelsPower,
+                 SetPowerZerro,
+                 StartWalk,
+                 SetPidSettings,
+                 SetAngle,
+                 EnableDebug,
+                 SetPowerOffset,
+                 SetWheelSpeed};
 
     Car();
     ~Car();
