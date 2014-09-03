@@ -46,7 +46,6 @@ void Car::update()
     wheel_right.update();
     update_distance();
 
-    /**
     if (show_info) {
         Serial.print("x:");
         Serial.print(giro_angles[0], 4);
@@ -62,17 +61,6 @@ void Car::update()
         Serial.print(wheel_right.get_speed(), 4);
         Serial.print("\n");
     }
-    **/
-    if (0){//(show_info) {
-        Serial.print(" l_s:");
-        //Serial.print(wheel_left.get_speed(), 4);
-        Serial.print(wheel_left.get_speed());
-        Serial.print(" r_s:");
-        //Serial.print(wheel_right.get_speed(), 4);
-        Serial.print(wheel_right.get_speed());
-        Serial.print("\n");
-    }
-
 
     //потерянна связь с оператором.
     if(0)// (check_last_time && (micros() > last_cmd_time + 100000) )
