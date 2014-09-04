@@ -4,6 +4,40 @@
 #include "Ultrasonic.h"
 #include "my_pid.h"
 
+//номера пинов
+#define US_TRIGER_PIN 7
+#define US_ECHO_PIN 8
+#define US_TRIGER_TIMEOUT_MK 50000
+#define US_MAX_DURATION_MK 500000
+
+#define LEFT_WHEEL_FORWARD_PIN 3
+#define LEFT_WHEEL_BACKWARD_PIN 5
+
+#define RIGTH_WHEEL_FORWARD_PIN 6
+#define RIGTH_WHEEL_BACKWARD_PIN 9
+
+#define LEFT_WHEEL_SPEED_COUNTER_PIN 4
+#define RIGHT_WHEEL_SPEED_COUNTER_PIN 10
+
+//сласс для проверки интервалов
+class Period{
+    unsigned long st;
+    unsigned long duration;
+public:
+    
+    Period(unsigned long duration_mk):duration(duration_mk){st = micros();}
+    bool isReady(){
+        unsigned long ct = micros();
+        unsigned long dt = ct - st;
+        
+        if (dt < duration)
+            return false;
+
+        st = ct;
+        return true;
+    }
+};
+
 class State;
 
 class Car
@@ -47,6 +81,7 @@ private:
     State * turn_state;
     State * move_back_state;
     State * turn_angle_state;
+    Period info_period;
  
     void update_distance();
 };

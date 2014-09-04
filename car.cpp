@@ -10,15 +10,16 @@
 Car::Car():
     ud_start_time(millis()),
     distance_cm(0.f),
-    wheel_left(3, 5),
-    wheel_right(6, 9),
-    ultrasonic(7, 8),
+    wheel_left(LEFT_WHEEL_FORWARD_PIN, LEFT_WHEEL_BACKWARD_PIN),
+    wheel_right(RIGTH_WHEEL_FORWARD_PIN, RIGTH_WHEEL_BACKWARD_PIN),
+    ultrasonic(US_TRIGER_PIN, US_ECHO_PIN, US_MAX_DURATION_MK),
     last_cmd_time(0),
     check_last_time(false),
     enable_walk(false),
     max_walk_power(0.5),
     min_distance(20),
-    show_info(false)
+    show_info(false),
+    info_period(100000)
 { 
     move_forward_state = new MoveForwardState(*this, 0.8, 15.f);
     turn_state = new TurnState(*this,  800000, 15.f, 0.7);
@@ -46,7 +47,7 @@ void Car::update()
     wheel_right.update();
     update_distance();
 
-    if (show_info) {
+    if (show_info && info_period.isReady() ) {
         Serial.print("x:");
         Serial.print(giro_angles[0], 4);
         Serial.print(" y:");
@@ -54,7 +55,7 @@ void Car::update()
         Serial.print(" z:");
         Serial.print(giro_angles[2], 4);
         Serial.print(" d:");
-        Serial.print(distance_cm, 4);
+        Serial.print(distance_cm);
         Serial.print(" l_s:");
         Serial.print(wheel_left.get_speed(), 4);
         Serial.print(" r_s:");
@@ -276,10 +277,9 @@ void Car::start_rotate(float angle)
 
 void Car::update_distance()
 {
-    return;
-    if ( millis() > ud_start_time + 100 )
+    if ( micros() > ud_start_time + US_TRIGER_TIMEOUT_MK )
     {       
         distance_cm = ultrasonic.Ranging(CM);
-        ud_start_time = millis();
+        ud_start_time = micros();
      }
 }

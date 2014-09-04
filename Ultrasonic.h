@@ -22,7 +22,7 @@
 class Ultrasonic
 {
   public:
-    Ultrasonic(int TP, int EP);
+    Ultrasonic(int TP, int EP, unsigned long max_period_mk);
     long Timing();
     long Ranging(int sys);
 
@@ -30,6 +30,7 @@ class Ultrasonic
     int Trig_pin;
     int Echo_pin;
     long  duration,distacne_cm,distance_inc;
+    unsigned long max_period;
     
 };
 

@@ -10,12 +10,13 @@
 
 #include "Ultrasonic.h"
 
-Ultrasonic::Ultrasonic(int TP, int EP)
+Ultrasonic::Ultrasonic(int TP, int EP, unsigned long max_period_mk)
 {
    pinMode(TP, OUTPUT);
    pinMode(EP, INPUT);
    Trig_pin=TP;
    Echo_pin=EP;
+   max_period = max_period_mk;
 }
 
 long Ultrasonic::Timing()
@@ -25,7 +26,11 @@ long Ultrasonic::Timing()
   digitalWrite(Trig_pin, HIGH);
   delayMicroseconds(10);
   digitalWrite(Trig_pin, LOW);
-  duration = pulseIn(Echo_pin, HIGH);
+  duration = pulseIn(Echo_pin, HIGH, max_period);
+
+  if (duration == 0)
+      duration = max_period;
+
   return duration;
 }
 
