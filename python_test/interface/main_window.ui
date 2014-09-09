@@ -273,7 +273,7 @@
               <item>
                <widget class="QDoubleSpinBox" name="doubleSpinBox_p">
                 <property name="decimals">
-                 <number>3</number>
+                 <number>6</number>
                 </property>
                 <property name="minimum">
                  <double>-5.000000000000000</double>
@@ -316,7 +316,7 @@
               <item>
                <widget class="QDoubleSpinBox" name="doubleSpinBox_i">
                 <property name="decimals">
-                 <number>3</number>
+                 <number>6</number>
                 </property>
                 <property name="minimum">
                  <double>-5.000000000000000</double>
@@ -359,7 +359,7 @@
               <item>
                <widget class="QDoubleSpinBox" name="doubleSpinBox_d">
                 <property name="decimals">
-                 <number>3</number>
+                 <number>6</number>
                 </property>
                 <property name="minimum">
                  <double>-5.000000000000000</double>
@@ -578,29 +578,35 @@
               <item>
                <widget class="QSlider" name="horizontalSlider_speed">
                 <property name="minimum">
-                 <number>16</number>
+                 <number>0</number>
                 </property>
                 <property name="maximum">
-                 <number>240</number>
+                 <number>233003000</number>
                 </property>
                 <property name="pageStep">
                  <number>10</number>
+                </property>
+                <property name="tracking">
+                 <bool>true</bool>
                 </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
                 <property name="tickPosition">
-                 <enum>QSlider::TicksAbove</enum>
+                 <enum>QSlider::NoTicks</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="spinBox">
+                <property name="maximum">
+                 <number>233003000</number>
                 </property>
                </widget>
               </item>
              </layout>
             </item>
            </layout>
-           <zorder>label_17</zorder>
-           <zorder>layoutWidget</zorder>
-           <zorder>radioButton_left_wheel_speed</zorder>
-           <zorder>radioButton_right_wheel_speed</zorder>
           </widget>
          </item>
         </layout>
@@ -716,12 +722,44 @@
    <slot>clear()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>509</x>
-     <y>383</y>
+     <x>475</x>
+     <y>91</y>
     </hint>
     <hint type="destinationlabel">
      <x>352</x>
      <y>419</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider_speed</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>912</x>
+     <y>714</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>885</x>
+     <y>714</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>horizontalSlider_speed</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>720</x>
+     <y>719</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>920</x>
+     <y>712</y>
     </hint>
    </hints>
   </connection>

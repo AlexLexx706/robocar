@@ -1,10 +1,12 @@
+#include "Arduino.h"
+#include <avr/interrupt.h>
 #include "car.h"
 #include <SPI.h>
 #include "my_pid.h"
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
-#include <PinChangeInt.h>
+#include <MsTimer2.h>
 
 #define LEFT_SPEED_COUNTER_PIN 4
 #define RIGHT_SPEED_COUNTER_PIN 10
@@ -24,22 +26,6 @@ static volatile bool mpuInterrupt = false;     // indicates whether MPU interrup
 static Car car;
 static uint8_t buffer[33];
 static uint8_t buffer_size = 0;
-static bool setup_flag = false;
-
-
-void update_left_wheel() {
-    latest_interrupted_pin=PCintPort::arduinoPin;
-    unsigned long cur_time = millis();
-    car.wheel_left.speed = cur_time - car.wheel_left.last_time;
-    car.wheel_left.last_time = cur_time;
-};
-
-void update_right_wheel() {
-    latest_interrupted_pin=PCintPort::arduinoPin;
-    unsigned long cur_time = millis();
-    car.wheel_right.speed = cur_time - car.wheel_right.last_time;
-    car.wheel_right.last_time = cur_time;
-};
 
 
 void dmpDataReady()
@@ -47,6 +33,12 @@ void dmpDataReady()
     mpuInterrupt = true;
 }
 
+
+void update_wheel_speed()
+{
+    car.wheel_left.updata_count();
+    car.wheel_right.updata_count();
+}
 
 void update_dmp6(float euler[3])
 {
@@ -85,56 +77,50 @@ void update_dmp6(float euler[3])
     }
 }
 
+
+
 void setup() 
 { 
-    if (!setup_flag)
+    Serial.begin(115200);
+    Serial.println("Connect serial speed=115200!!!"); 
+
+    car.wheel_left.set_power(0);
+    car.wheel_right.set_power(0);
+
+    //подключим шину I2C
+    Wire.begin();
+    TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
+    mpu.initialize();
+    mpu.testConnection();
+    uint8_t devStatus = mpu.dmpInitialize();
+
+    // supply your own gyro offsets here, scaled for min sensitivity
+    mpu.setXGyroOffset(220);
+    mpu.setYGyroOffset(76);
+    mpu.setZGyroOffset(-85);
+    mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+
+    // make sure it worked (returns 0 if so)
+    if (devStatus == 0)
     {
-        Serial.begin(115200);
-        Serial.println("Connect serial speed=115200!!!"); 
-        
-        //установим прерывания для счётчиков скорости
-        pinMode(LEFT_SPEED_COUNTER_PIN, INPUT); digitalWrite(LEFT_SPEED_COUNTER_PIN, HIGH);
-        PCintPort::attachInterrupt(LEFT_SPEED_COUNTER_PIN, &update_left_wheel, FALLING);
-
-        pinMode(RIGHT_SPEED_COUNTER_PIN, INPUT); digitalWrite(RIGHT_SPEED_COUNTER_PIN, HIGH);
-        PCintPort::attachInterrupt(RIGHT_SPEED_COUNTER_PIN, &update_right_wheel, FALLING);
-
-
-        car.wheel_left.set_power(0);
-        car.wheel_right.set_power(0);
-    
-        //подключим шину I2C
-        Wire.begin();
-        TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
-        mpu.initialize();
-        mpu.testConnection();
-        uint8_t devStatus = mpu.dmpInitialize();
-    
-        // supply your own gyro offsets here, scaled for min sensitivity
-        mpu.setXGyroOffset(220);
-        mpu.setYGyroOffset(76);
-        mpu.setZGyroOffset(-85);
-        mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
-    
-        // make sure it worked (returns 0 if so)
-        if (devStatus == 0)
-        {
-            Serial.println("mpu.setDMPEnabled");
-            mpu.setDMPEnabled(true);
-            attachInterrupt(0, dmpDataReady, RISING);
-            mpuIntStatus = mpu.getIntStatus();
-            dmpReady = true;
-            packetSize = mpu.dmpGetFIFOPacketSize();
-        }
-        setup_flag = true;
+        Serial.println("mpu.setDMPEnabled");
+        mpu.setDMPEnabled(true);
+        attachInterrupt(0, dmpDataReady, RISING);
+        mpuIntStatus = mpu.getIntStatus();
+        dmpReady = true;
+        packetSize = mpu.dmpGetFIFOPacketSize();
     }
+    
+    //запуск счёта скорости
+    MsTimer2::set(0, update_wheel_speed);
+    MsTimer2::start();
 }
 
 void loop() 
 {
     update_dmp6(car.giro_angles);
     car.update();
-    
+
     //чтение данных из ком порта
     while (Serial.available())
     {
