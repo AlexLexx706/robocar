@@ -44,7 +44,7 @@ class Protocol:
     
     def set_wheel_speed(self, id, speed):
         if self.serial is not None:
-            data = struct.pack("<BBL", self.CMD_SET_WHEEL_SPEED, id, speed)
+            data = struct.pack("<BBi", self.CMD_SET_WHEEL_SPEED, id, speed)
             self.serial.write(struct.pack("<B", len(data)) + data)
 
     def set_left_wheel_power(self, value):

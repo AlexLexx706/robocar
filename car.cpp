@@ -151,6 +151,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     if ( data[0] == SetLeftWheelPower && data_size >= 5 )
     {
         wheel_left.set_power(*((float *)&data[1]));
+        wheel_left.speed_control = false;
         enable_walk = false;
 
         if (show_info) {
@@ -163,6 +164,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     else if ( data[0] == SetRightWheelPower  && data_size >= 5 )
     {
         wheel_right.set_power(*((float *)&data[1]));
+        wheel_right.speed_control = false;
         enable_walk = false;
 
         if (show_info) {
@@ -179,12 +181,16 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         wheel_left.set_power(l);
         wheel_right.set_power(r);
         enable_walk = false;
+        wheel_right.speed_control = false;
+        wheel_left.speed_control = false;
     }
     //остановка.
     else if ( data[0] == SetPowerZerro )
     {
         wheel_left.set_power(0.f);
         wheel_right.set_power(0.f);
+        wheel_right.speed_control = false;
+        wheel_left.speed_control = false;
         enable_walk = false;
     }
     else if ( data[0] == StartWalk )
@@ -236,7 +242,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     {
         struct Params{
           byte id;
-          unsigned long speed;
+          int speed;
         } * params((Params *)&data[1]);
 
         Serial.print("SetWheelSpeed id:");

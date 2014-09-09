@@ -1,5 +1,3 @@
-#include "Arduino.h"
-#include <avr/interrupt.h>
 #include "car.h"
 #include <SPI.h>
 #include "my_pid.h"
@@ -7,6 +5,7 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
 #include <MsTimer2.h>
+//#include <eRCaGuy_Timer2_Counter.h>
 
 #define LEFT_SPEED_COUNTER_PIN 4
 #define RIGHT_SPEED_COUNTER_PIN 10
@@ -114,6 +113,7 @@ void setup()
     //запуск счёта скорости
     MsTimer2::set(0, update_wheel_speed);
     MsTimer2::start();
+    //timer2.setup(); 
 }
 
 void loop() 

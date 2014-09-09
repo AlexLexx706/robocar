@@ -10,7 +10,7 @@ public:
     Wheel(int forward_pin, int backward_pin, int speed_counter_pin);
     void update();
     void set_abs_speed(int speed){abs_speed = speed;};
-    unsigned long get_abs_speed() const {return abs_speed;};
+    int get_abs_speed() const {return abs_speed;};
 
     int get_speed() const {
 	int res;
@@ -37,11 +37,10 @@ private:
     int backward_pin;
     int speed_counter_pin;
     double power;
-    unsigned long abs_speed;
+    int abs_speed;
     double pid_power;
     double error;
     Period info_period;
-    Period count_period;
 
     int take_count() {
         int res;

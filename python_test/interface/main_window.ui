@@ -578,10 +578,10 @@
               <item>
                <widget class="QSlider" name="horizontalSlider_speed">
                 <property name="minimum">
-                 <number>0</number>
+                 <number>-700</number>
                 </property>
                 <property name="maximum">
-                 <number>233003000</number>
+                 <number>700</number>
                 </property>
                 <property name="pageStep">
                  <number>10</number>
@@ -599,8 +599,11 @@
               </item>
               <item>
                <widget class="QSpinBox" name="spinBox">
+                <property name="minimum">
+                 <number>-700</number>
+                </property>
                 <property name="maximum">
-                 <number>233003000</number>
+                 <number>700</number>
                 </property>
                </widget>
               </item>
