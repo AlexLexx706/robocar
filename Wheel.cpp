@@ -100,12 +100,20 @@ void Wheel::update()
             Serial.print(pid_power);
             Serial.print("\n");
         }
-        double cur_power = abs_speed > 0 ? power + pid_power : power - pid_power;
+        double cur_power;
+        if (abs_speed > 0){
+            cur_power = power + pid_power;
 
-        //if (cur_power <= 0.)
-        //    cur_power = 0;
-        set_power(cur_power);
+            if (cur_power <= 0.)
+                cur_power = 0.;
+        }else{
+            cur_power = power - pid_power;
+
+            if (cur_power > 0.)
+                cur_power = 0.;
+        }
         
+        set_power(cur_power);
     }
 }
 
