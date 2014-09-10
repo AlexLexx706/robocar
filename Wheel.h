@@ -7,7 +7,7 @@
 class Wheel
 {
 public:
-    Wheel(int forward_pin, int backward_pin, int speed_counter_pin);
+    Wheel(int pwm_pin, int direction_pin, int speed_counter_pin);
     void update();
     void set_abs_speed(int speed){abs_speed = speed;};
     int get_abs_speed() const {return abs_speed;};
@@ -33,8 +33,8 @@ private:
     volatile int count;
     volatile int speed_pin_state;
     volatile int speed;
-    int forward_pin;
-    int backward_pin;
+    int pwm_pin;
+    int direction_pin;
     int speed_counter_pin;
     double power;
     int abs_speed;

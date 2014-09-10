@@ -2,12 +2,12 @@
 
 #define MAX_COUNT 1500
 
-Wheel::Wheel(int __forward_pin, int __backward_pin, int __speed_counter_pin):
+Wheel::Wheel(int _pwm_pin, int _direction_pin, int __speed_counter_pin):
     speed(0),
     pid(&error, &pid_power, 0.0001, 0, 0.00001),
     speed_control(false),
-    forward_pin(__forward_pin),
-    backward_pin(__backward_pin),
+    pwm_pin(_pwm_pin),
+    direction_pin(_direction_pin),
     speed_counter_pin(__speed_counter_pin),
     power(0.0),
     abs_speed(30),
@@ -17,10 +17,10 @@ Wheel::Wheel(int __forward_pin, int __backward_pin, int __speed_counter_pin):
     count(0)
 {
     pid.SetOutputLimits(-1,1);
-    pinMode(forward_pin, OUTPUT);
-    pinMode(backward_pin, OUTPUT);
-    digitalWrite(backward_pin, LOW);
-    digitalWrite(forward_pin, LOW);
+    pinMode(pwm_pin, OUTPUT);
+    pinMode(direction_pin, OUTPUT);
+    digitalWrite(pwm_pin, LOW);
+    digitalWrite(direction_pin, LOW);
     
     //прочитаем состояние пина
     pinMode(speed_counter_pin, INPUT);
@@ -60,24 +60,20 @@ void Wheel::set_power(double value)
 
         if ( value > 0. )
         {
-            //analogWrite(forward_pin, int(value * 255));
-            //digitalWrite(backward_pin, LOW);
-            analogWrite(forward_pin, int(value * 255));
-            digitalWrite(backward_pin, LOW);
+            analogWrite(pwm_pin, int(value * 255));
+            digitalWrite(direction_pin, LOW);
 
 
         }
         else if ( value < 0.f )
         {
-            //analogWrite(backward_pin, int(-(value * 255)));
-            //digitalWrite(forward_pin, LOW);
-            analogWrite(forward_pin, int(value * 255));
-            digitalWrite(backward_pin, HIGH);
+            analogWrite(pwm_pin, int(value * 255));
+            digitalWrite(direction_pin, HIGH);
         }
         else
         {
-            digitalWrite(backward_pin, LOW);
-            digitalWrite(forward_pin, LOW);
+            digitalWrite(pwm_pin, LOW);
+            digitalWrite(direction_pin, LOW);
         }
     }
 }
