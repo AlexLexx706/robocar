@@ -5,6 +5,7 @@
 #include "CarStates.h"
 #include <Arduino.h>
 
+
 #define PI 3.14159265
 
 Car::Car():
@@ -31,6 +32,18 @@ Car::Car():
     giro_angles[0] = 0.f;
     giro_angles[1] = 0.f;
     giro_angles[2] = 0.f;
+    
+}
+
+void Car::init(){
+    servo1.setMinimumPulse(700);
+    servo1.setMaximumPulse(2550);
+
+    servo2.setMinimumPulse(700);
+    servo2.setMaximumPulse(2550);
+
+    servo1.attach(9);
+    servo2.attach(10); 
 }
 
 Car::~Car()
@@ -49,14 +62,14 @@ void Car::update()
 
 
     if (show_info && info_period.isReady() ) {
-        //Serial.print("x:");
-        //Serial.print(giro_angles[0], 4);
-        //Serial.print(" y:");
-        //Serial.print(giro_angles[1], 4);
-        //Serial.print(" z:");
-        //Serial.print(giro_angles[2], 4);
-        //Serial.print(" d:");
-        //Serial.print(distance_cm);
+        Serial.print("x:");
+        Serial.print(giro_angles[0], 4);
+        Serial.print(" y:");
+        Serial.print(giro_angles[1], 4);
+        Serial.print(" z:");
+        Serial.print(giro_angles[2], 4);
+        Serial.print(" d:");
+        Serial.print(distance_cm);
         Serial.print(" l_s:");
         Serial.print(wheel_left.get_speed());
         Serial.print(" r_s:");
@@ -259,6 +272,35 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
             wheel_right.set_abs_speed(params->speed);
             wheel_right.speed_control = true;
         }
+        else{
+            wheel_left.set_abs_speed(params->speed);
+            wheel_right.set_abs_speed(params->speed);
+            wheel_right.speed_control = true;
+            wheel_left.speed_control = true;        
+        }
+    }
+    else if ( data[0] == SetServoAngle )
+    {
+        struct Params{
+          byte id;
+          unsigned char angle;
+        } * params((Params *)&data[1]);
+
+        Serial.print("SetServoAngle id:");
+        Serial.print(params->id);
+        Serial.print(" angle:");
+        Serial.println(params->angle);
+
+        if (params->id == 0){
+            servo1.write(params->angle);
+        //установка пида правого колеса
+        }else if (params->id == 1){
+            servo2.write(params->angle);
+        }else{
+            Serial.print("Wrong servo number:");
+            Serial.println(params->id);
+        }
+        
     }
 
     //Запрос времени комманды.

@@ -24,24 +24,29 @@ void PID::Compute() {
         ci = 0;
     }
     unsigned long cur_time = micros();
-    double dt = (cur_time - prew_time) / 1000000.;
-    double de = *error - prew_error;
-    double cp = kp * (*error);
-    double cd = 0;
+    unsigned long cur_dt = cur_time - prew_time;
+
+    //постоянный дт
+    if (cur_dt >= 50000){
+        double dt = cur_dt / 1000000.;
+        double de = *error - prew_error;
+        double cp = kp * (*error);
+        double cd = 0;
+        
+        ci += (*error) * dt;
     
-    ci += (*error) * dt;
-
-    if (dt > 0)
-        cd = de / dt;
-
-    prew_time = cur_time;
-    prew_error = *error;
-    (*output) = cp + (ki * ci) + (kd * cd);
-
-    if ((*output) < out_min)
-        (*output) = out_min;
-    else if ((*output) > out_max)
-        (*output) = out_max;
+        if (dt > 0)
+            cd = de / dt;
+    
+        prew_time = cur_time;
+        prew_error = *error;
+        (*output) = cp + (ki * ci) + (kd * cd);
+    
+        if ((*output) < out_min)
+            (*output) = out_min;
+        else if ((*output) > out_max)
+            (*output) = out_max;
+    }
 }
 
 void PID::SetOutputLimits(double min, double max){

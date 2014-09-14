@@ -5,12 +5,7 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
 #include <MsTimer2.h>
-//#include <eRCaGuy_Timer2_Counter.h>
-
-#define LEFT_SPEED_COUNTER_PIN 4
-#define RIGHT_SPEED_COUNTER_PIN 10
-
-uint8_t latest_interrupted_pin;
+#include <ServoTimer1.h>
 
 static MPU6050 mpu;
 static bool dmpReady = false;  // set true if DMP init was successful
@@ -25,7 +20,6 @@ static volatile bool mpuInterrupt = false;     // indicates whether MPU interrup
 static Car car;
 static uint8_t buffer[33];
 static uint8_t buffer_size = 0;
-
 
 void dmpDataReady()
 {
@@ -113,7 +107,8 @@ void setup()
     //запуск счёта скорости
     MsTimer2::set(0, update_wheel_speed);
     MsTimer2::start();
-    //timer2.setup(); 
+    
+    car.init();
 }
 
 void loop() 

@@ -4,6 +4,7 @@
 #include "Ultrasonic.h"
 #include "my_pid.h"
 #include "period.h"
+#include <ServoTimer1.h>
 
 //номера пинов
 #define US_TRIGER_PIN 7
@@ -15,10 +16,10 @@
 #define LEFT_WHEEL_DIRECTION_PIN 3
 
 #define RIGTH_WHEEL_PWM_PIN 6
-#define RIGTH_WHEEL_DIRECTION_PIN 9
+#define RIGTH_WHEEL_DIRECTION_PIN A1
 
 #define LEFT_WHEEL_SPEED_COUNTER_PIN 4
-#define RIGHT_WHEEL_SPEED_COUNTER_PIN 10
+#define RIGHT_WHEEL_SPEED_COUNTER_PIN A0
 
 class State;
 
@@ -35,10 +36,12 @@ public:
                  SetAngle,
                  EnableDebug,
                  SetPowerOffset,
-                 SetWheelSpeed};
+                 SetWheelSpeed, 
+                 SetServoAngle};
 
     Car();
     ~Car();
+    void init();
     void update();
     Wheel wheel_left;
     Wheel wheel_right;
@@ -64,6 +67,9 @@ private:
     State * move_back_state;
     State * turn_angle_state;
     Period info_period;
+
+    ServoTimer1 servo1;
+    ServoTimer1 servo2;
  
     void update_distance();
 };

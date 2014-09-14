@@ -13,6 +13,7 @@ class Protocol:
     CMD_ENABLE_DEBUG = 7
     CMD_SET_OFFSET = 8
     CMD_SET_WHEEL_SPEED = 9
+    CMD_SET_SERVO_ANGLE = 10
     
     def __init__(self):
         self.serial = None
@@ -45,6 +46,11 @@ class Protocol:
     def set_wheel_speed(self, id, speed):
         if self.serial is not None:
             data = struct.pack("<BBi", self.CMD_SET_WHEEL_SPEED, id, speed)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+
+    def set_servo_angle(self, id, angle):
+        if self.serial is not None:
+            data = struct.pack("<BBB", self.CMD_SET_SERVO_ANGLE, id, angle)
             self.serial.write(struct.pack("<B", len(data)) + data)
 
     def set_left_wheel_power(self, value):

@@ -335,6 +335,14 @@ class MainWindow(QtGui.QMainWindow):
     def on_doubleSpinBox_angle_valueChanged(self, value):
         self.set_angle(value)
     
+    @pyqtSlot("int")
+    def on_spinBox_servo_1_valueChanged(self, value):
+        self.protocol.set_servo_angle(0, value)
+    
+    @pyqtSlot("int")
+    def on_spinBox_servo_2_valueChanged(self, value):
+        self.protocol.set_servo_angle(1, value)
+
     def get_angle(self):
         return self.doubleSpinBox_angle.value()
         
@@ -355,7 +363,9 @@ class MainWindow(QtGui.QMainWindow):
     def get_wheel_id(self):
         if self.radioButton_left_wheel_speed.isChecked():
             return 0
-        return 1
+        elif self.radioButton_right_wheel_speed.isChecked():
+            return 1
+        return 2
     
     @pyqtSlot("int")
     def on_horizontalSlider_speed_valueChanged(self, value):
