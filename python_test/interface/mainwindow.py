@@ -3,11 +3,12 @@ from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
 from protocol import Protocol
-
+from cross_detector.ffmpeg_reader import FFmpegReader
 
 class MainWindow(QtGui.QMainWindow):
     add_char = pyqtSignal(str)
     add_line = pyqtSignal(str)
+    new_frame = pyqtSignal("QImage")
     
     KEY_A = 65
     KEY_W = 87
@@ -43,6 +44,21 @@ class MainWindow(QtGui.QMainWindow):
                             self.KEY_W: False,
                             self.KEY_D: False,
                             self.KEY_S: False}
+        
+        self.new_frame.connect(self.on_new_frame)
+        threading.Thread(target=self.read_frame).start()
+    
+    def read_frame(self):
+        reader = FFmpegReader()
+        reader.process_direct_show_video()
+        
+        while 1:
+            image = QtGui.QImage(reader.read_string(), reader.size[0], reader.size[1], reader.size[0] * 3, QtGui.QImage.Format_RGB888)
+            self.new_frame.emit(image)
+    
+    def on_new_frame(self, image):
+        self.label_video.setPixmap(QtGui.QPixmap.fromImage(image))
+    
     
     def update_car_controll(self):
         if self.is_enable_key_controll():
