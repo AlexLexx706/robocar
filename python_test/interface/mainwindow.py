@@ -47,7 +47,28 @@ class MainWindow(QtGui.QMainWindow):
         
         self.new_frame.connect(self.on_new_frame)
         threading.Thread(target=self.read_frame).start()
+        
+        #подключим управление камерой через мышку
+        self.label_video.start_move_camera.connect(self.on_start_move_camera)
+        self.label_video.move_camera.connect(self.on_move_camera)
+        self.camera_start_pos = None
+        self.label_video.addAction(self.action_reset_camera)
     
+    @pyqtSlot(bool)
+    def on_action_reset_camera_triggered(self, v):
+        self.set_servo_1_angle(98)
+        self.set_servo_2_angle(68)
+    
+    def on_start_move_camera(self, pos):
+        self.camera_start_pos = [self.get_servo_1_angle(), self.get_servo_2_angle()]
+
+    def on_move_camera(self, pos):
+        k = 0.5
+        self.set_servo_1_angle(self.camera_start_pos[0] - int(pos.x() * k))
+        self.set_servo_2_angle(self.camera_start_pos[1] - int(pos.y() * k))
+
+
+        
     def read_frame(self):
         reader = FFmpegReader()
         reader.process_direct_show_video()
@@ -65,7 +86,7 @@ class MainWindow(QtGui.QMainWindow):
             #print self.kay_states
             l = 0.0
             r = 0.0
-            max_speed = 0.5
+            max_speed = 0.7
             rotate_koef = 0.8
             
             #вперёд
@@ -355,6 +376,19 @@ class MainWindow(QtGui.QMainWindow):
     def on_spinBox_servo_1_valueChanged(self, value):
         self.protocol.set_servo_angle(0, value)
     
+    def get_servo_1_angle(self):
+        return self.spinBox_servo_1.value()
+
+    def set_servo_1_angle(self, angle):
+        self.spinBox_servo_1.setValue(angle)
+
+    def get_servo_2_angle(self):
+        return self.spinBox_servo_2.value()
+
+    def set_servo_2_angle(self, angle):
+        self.spinBox_servo_2.setValue(angle)
+
+
     @pyqtSlot("int")
     def on_spinBox_servo_2_valueChanged(self, value):
         self.protocol.set_servo_angle(1, value)

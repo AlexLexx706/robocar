@@ -35,14 +35,37 @@
          <enum>QFrame::Raised</enum>
         </property>
         <layout class="QGridLayout" name="gridLayout_9">
-         <item row="2" column="1">
+         <item row="0" column="1">
           <widget class="QPushButton" name="pushButton_send">
            <property name="text">
             <string>послать</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="0" rowspan="3">
+         <item row="0" column="3">
+          <spacer name="horizontalSpacer_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item row="0" column="0">
+          <widget class="QPushButton" name="pushButton_clear">
+           <property name="text">
+            <string>очистить</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0" colspan="4">
+          <widget class="QLineEdit" name="lineEdit_text"/>
+         </item>
+         <item row="4" column="0" rowspan="2" colspan="4">
           <widget class="QPlainTextEdit" name="plainTextEdit_log">
            <property name="readOnly">
             <bool>true</bool>
@@ -52,32 +75,12 @@
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QLineEdit" name="lineEdit_text"/>
-         </item>
-         <item row="3" column="1">
-          <widget class="QPushButton" name="pushButton_clear">
-           <property name="text">
-            <string>очистить</string>
-           </property>
-          </widget>
-         </item>
-         <item row="4" column="1">
-          <spacer name="verticalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>471</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
         </layout>
        </widget>
-       <widget class="QLabel" name="label_video">
+       <widget class="LabelExt" name="label_video">
+        <property name="contextMenuPolicy">
+         <enum>Qt::ActionsContextMenu</enum>
+        </property>
         <property name="text">
          <string/>
         </property>
@@ -156,7 +159,7 @@
         <item row="2" column="0">
          <widget class="QTabWidget" name="tabWidget">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab">
            <attribute name="title">
@@ -678,7 +681,10 @@
                     <number>180</number>
                    </property>
                    <property name="pageStep">
-                    <number>10</number>
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>90</number>
                    </property>
                    <property name="tracking">
                     <bool>true</bool>
@@ -698,6 +704,9 @@
                    </property>
                    <property name="maximum">
                     <number>180</number>
+                   </property>
+                   <property name="value">
+                    <number>90</number>
                    </property>
                   </widget>
                  </item>
@@ -721,7 +730,10 @@
                     <number>180</number>
                    </property>
                    <property name="pageStep">
-                    <number>10</number>
+                    <number>1</number>
+                   </property>
+                   <property name="value">
+                    <number>90</number>
                    </property>
                    <property name="tracking">
                     <bool>true</bool>
@@ -741,6 +753,9 @@
                    </property>
                    <property name="maximum">
                     <number>180</number>
+                   </property>
+                   <property name="value">
+                    <number>90</number>
                    </property>
                   </widget>
                  </item>
@@ -785,68 +800,22 @@
     <property name="title">
      <string>Файл</string>
     </property>
-    <addaction name="action_save_as"/>
-    <addaction name="action_load"/>
-    <addaction name="action_save"/>
    </widget>
    <addaction name="menuAfqk"/>
   </widget>
-  <action name="action_save_as">
+  <action name="action_reset_camera">
    <property name="text">
-    <string>Сохранить как</string>
-   </property>
-  </action>
-  <action name="action_load">
-   <property name="text">
-    <string>Открыть</string>
-   </property>
-  </action>
-  <action name="action_save">
-   <property name="text">
-    <string>Сохранить</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+S</string>
-   </property>
-  </action>
-  <action name="action_remove">
-   <property name="text">
-    <string>удлить</string>
-   </property>
-   <property name="shortcut">
-    <string>Del</string>
-   </property>
-  </action>
-  <action name="action_create">
-   <property name="text">
-    <string>создать</string>
-   </property>
-   <property name="shortcut">
-    <string>Return</string>
-   </property>
-  </action>
-  <action name="action_copy">
-   <property name="text">
-    <string>копировать</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+C</string>
-   </property>
-  </action>
-  <action name="action_insert">
-   <property name="text">
-    <string>вставить</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+V</string>
-   </property>
-  </action>
-  <action name="actionAction_save_ranges">
-   <property name="text">
-    <string>action_save_ranges</string>
+    <string>Сбросить камеру</string>
    </property>
   </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>LabelExt</class>
+   <extends>QLabel</extends>
+   <header>label_ext</header>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="res.qrc"/>
  </resources>
