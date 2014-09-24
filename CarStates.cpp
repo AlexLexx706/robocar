@@ -141,7 +141,7 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
 
 void TurnAngleState::set_params(float p, float i, float d)
 {
-    if (car.show_info) {
+    if (car.debug) {
         Serial.print("set_params p:");
         Serial.print(p, 4);
         Serial.print(" i:");
@@ -149,7 +149,6 @@ void TurnAngleState::set_params(float p, float i, float d)
         Serial.print(" d:");
         Serial.print(d, 4);
         Serial.print("\n");
-        
     }
   
     delete myPID;
@@ -159,7 +158,7 @@ void TurnAngleState::set_params(float p, float i, float d)
 
 void TurnAngleState::set_angle(float c_angle)
 {
-    if (car.show_info) {
+    if (car.debug) {
         Serial.print("set_angle angle:");
         Serial.print(c_angle, 4);
         Serial.print("\n");

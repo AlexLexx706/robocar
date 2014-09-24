@@ -2,10 +2,16 @@
 import serial
 import struct
 import logging
+import threading
+from PyQt4 import QtCore
+from PyQt4.QtCore import pyqtSignal
 
 logger = logging.getLogger(__name__)
 
-class Protocol:
+class Protocol(QtCore.QObject):
+    add_line = pyqtSignal(str)
+    update_info = pyqtSignal(object)
+    
     CMD_SET_LEFT_WHEEL_POWER = 0
     CMD_SET_RIGTH_WHEEL_POWER = 1
     CMD_PID_SETTINGS = 5
@@ -14,10 +20,42 @@ class Protocol:
     CMD_SET_OFFSET = 8
     CMD_SET_WHEEL_SPEED = 9
     CMD_SET_SERVO_ANGLE = 10
-    
+    CMD_SET_INFO_PERIOD = 11
+    ACC_INFO = 12
+   
     def __init__(self):
+        QtCore.QObject.__init__(self)
+
         self.serial = None
-    
+        self.stop_read = True
+        
+    def read_proc(self):
+        try:
+            logger.debug("read_proc ->")
+            
+            line = ""
+            while not self.stop_read:
+                s = self.read()
+
+                if len(s) > 0:
+                    #начало приёма данных
+                    if ord(s) == 0:
+                        size, acc = struct.unpack('<BB', self.read(2))
+                        data = self.read(size-1)
+                        
+                        #получили новые данные о состояние.
+                        if acc == self.ACC_INFO:
+                            self.update_info.emit(struct.unpack('<fffffflHHBB', data))
+                    #отладка.
+                    else:
+                        if s != "\n":
+                            line += s
+                        else:
+                            self.add_line.emit(line)
+                            line = ""
+        finally:
+            logger.debug("read_proc <-")
+
     def connect(self, port, speed):
         if self.serial is not None:
             self.serial.close()
@@ -25,11 +63,23 @@ class Protocol:
 
         try:
             self.serial = serial.Serial(port, speed, timeout=4)
+
+            #запуск чтения.
+            self.read_thread = threading.Thread(target=self.read_proc)
+            self.stop_read = False
+            self.read_thread.start()
             return True
         except serial.SerialException as e:
             logger.error(e)
         return False
 
+    def close(self):
+        if self.serial is not None:
+            self.stop_read = True
+            self.serial.close()
+            self.read_thread.join()
+            self.serial = None
+        
     def is_connected(self):
         return self.serial is not None
 
@@ -72,19 +122,18 @@ class Protocol:
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_SET_OFFSET, offset)
             self.serial.write(struct.pack("<B", len(data)) + data)
-        
+
+    def set_info_period(self, period):
+        if self.serial is not None:
+            data = struct.pack("<BL", self.CMD_SET_INFO_PERIOD, period)
+            self.serial.write(struct.pack("<B", len(data)) + data)
 
     def write(self, message):
         if self.serial is not None:
             self.serial.write(message)
 
-    def read(self):
+    def read(self, size=1):
         if self.serial is not None:
-            return self.serial.read()
-
-    def close(self):
-        if self.serial is not None:
-            self.serial.close()
-            self.serial = None
+            return self.serial.read(size)
 
         

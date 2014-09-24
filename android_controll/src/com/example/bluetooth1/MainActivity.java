@@ -28,6 +28,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.VideoView;
 import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
@@ -59,6 +60,7 @@ public class MainActivity extends Activity implements SensorEventListener{
   private boolean first_accel = true;
   private long last_time = 0;
   private long accel_dt = 1000/20;
+  private VideoView video_view;
   
 
   
@@ -144,6 +146,10 @@ public class MainActivity extends Activity implements SensorEventListener{
     textView_messages.setMovementMethod(new ScrollingMovementMethod());
     checkBox_use_accel = (CheckBox)findViewById(R.id.checkBox_use_accel);
     mCheckBoxEnableDebug = (CheckBox)findViewById(R.id.CheckBox_enable_debug);
+    video_view = (VideoView)findViewById(R.id.videoView1);
+    video_view.setVideoPath("rtsp://192.168.0.80:8554/");
+    video_view.start();
+    
 
     btAdapter = BluetoothAdapter.getDefaultAdapter();
     checkBTState();

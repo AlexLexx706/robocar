@@ -7,7 +7,12 @@ class Period{
 public:
     
     Period(unsigned long duration_mk):duration(duration_mk){st = micros();}
+
     bool isReady(){
+        //проверка выключена
+        if (duration == 0xffffffff)
+            return false;
+
         unsigned long ct = micros();
         unsigned long dt = ct - st;
         
@@ -16,6 +21,10 @@ public:
 
         st = ct;
         return true;
+    }
+
+    void set_period(unsigned long duration_ms){
+        duration = duration_ms;
     }
 };
 #endif

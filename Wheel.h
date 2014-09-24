@@ -12,8 +12,8 @@ public:
     void set_abs_speed(int speed){abs_speed = speed;};
     int get_abs_speed() const {return abs_speed;};
 
-    int get_speed() const {
-	int res;
+    unsigned short get_speed() const {
+	unsigned short res;
 	uint8_t oldSREG = SREG;
 	cli();
         res = speed;
@@ -30,9 +30,9 @@ public:
     PID pid;
     bool speed_control;
 private:
-    volatile int count;
+    volatile unsigned short count;
     volatile int speed_pin_state;
-    volatile int speed;
+    volatile unsigned short speed;
     int pwm_pin;
     int direction_pin;
     int speed_counter_pin;

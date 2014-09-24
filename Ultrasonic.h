@@ -21,17 +21,17 @@
 
 class Ultrasonic
 {
-  public:
+public:
     Ultrasonic(int TP, int EP, unsigned long max_period_mk);
     long Timing();
-    long Ranging(int sys);
+    long Ranging();
+    long get_distance_cm() const {return distacne_cm;}
 
-    private:
+private:
     int Trig_pin;
     int Echo_pin;
-    long  duration,distacne_cm,distance_inc;
+    long duration, distacne_cm;
     unsigned long max_period;
-    
 };
 
 #endif //#ifndef Ultrasonic_h

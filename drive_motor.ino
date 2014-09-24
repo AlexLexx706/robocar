@@ -33,7 +33,7 @@ void update_wheel_speed()
     car.wheel_right.updata_count();
 }
 
-void update_dmp6(float euler[3])
+void update_dmp6()
 {
     // if programming failed, don't try to do anything
     if (!dmpReady) return;
@@ -66,7 +66,8 @@ void update_dmp6(float euler[3])
         fifoCount -= packetSize;
         
         mpu.dmpGetQuaternion(&q, fifoBuffer);
-        mpu.dmpGetEuler(euler, &q);
+        mpu.dmpGetEuler(car.giro_angles, &q);
+        mpu.dmpGetGravity(&car.gravity, &q);        
     }
 }
 
@@ -113,7 +114,7 @@ void setup()
 
 void loop() 
 {
-    update_dmp6(car.giro_angles);
+    update_dmp6();
     car.update();
 
     //чтение данных из ком порта

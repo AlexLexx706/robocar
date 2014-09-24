@@ -10,7 +10,6 @@
 
 Car::Car():
     ud_start_time(millis()),
-    distance_cm(0.f),
     wheel_left(LEFT_WHEEL_PWM_PIN, LEFT_WHEEL_DIRECTION_PIN, LEFT_WHEEL_SPEED_COUNTER_PIN),
     wheel_right(RIGTH_WHEEL_PWM_PIN, RIGTH_WHEEL_DIRECTION_PIN, RIGHT_WHEEL_SPEED_COUNTER_PIN),
     ultrasonic(US_TRIGER_PIN, US_ECHO_PIN, US_MAX_DURATION_MK),
@@ -19,8 +18,9 @@ Car::Car():
     enable_walk(false),
     max_walk_power(0.5),
     min_distance(20),
-    show_info(false),
-    info_period(1000000)
+    debug(false),
+    info_period(0xffffffff),
+    update_count(0)
 { 
     move_forward_state = new MoveForwardState(*this, 0.8, 15.f);
     turn_state = new TurnState(*this,  800000, 15.f, 0.7);
@@ -32,7 +32,6 @@ Car::Car():
     giro_angles[0] = 0.f;
     giro_angles[1] = 0.f;
     giro_angles[2] = 0.f;
-    
 }
 
 void Car::init(){
@@ -43,7 +42,10 @@ void Car::init(){
     servo2.setMaximumPulse(2550);
 
     servo1.attach(9);
-    servo2.attach(10); 
+    servo2.attach(10);
+
+    servo1.write(98);
+    servo2.write(68);
 }
 
 Car::~Car()
@@ -54,32 +56,45 @@ Car::~Car()
 }
 
 
+void Car::EmitState(){
+    InfoData data;
+    data.giro_angles[0] = giro_angles[0];
+    data.giro_angles[1] = giro_angles[1];
+    data.giro_angles[2] = giro_angles[2];
+    
+
+    data.gravity[0] = gravity.x;
+    data.gravity[1] = gravity.y;
+    data.gravity[2] = gravity.z;
+
+    
+    data.distance_cm = ultrasonic.get_distance_cm();
+    data.left_wheel_spped = wheel_left.get_speed();
+    data.right_wheel_spped = wheel_right.get_speed();
+    data.servo_angle1_1 = servo1.read();
+    data.servo_angle1_2 = servo2.read();
+    
+    Serial.write(0);
+    Serial.write(sizeof(data) + 1);
+    Serial.write(AccInfo);
+    Serial.write((const uint8_t *)&data, sizeof(data));
+}
+
 void Car::update()
 {
     wheel_left.update();
     wheel_right.update();
-    update_distance();
+    //update_distance();
+    update_count++;
 
-
-    if (show_info && info_period.isReady() ) {
-        Serial.print("x:");
-        Serial.print(giro_angles[0], 4);
-        Serial.print(" y:");
-        Serial.print(giro_angles[1], 4);
-        Serial.print(" z:");
-        Serial.print(giro_angles[2], 4);
-        Serial.print(" d:");
-        Serial.print(distance_cm);
-        Serial.print(" l_s:");
-        Serial.print(wheel_left.get_speed());
-        Serial.print(" r_s:");
-        Serial.print(wheel_right.get_speed());
-        Serial.print("\n");
+    //вещаем состояние.
+    if (info_period.isReady()){
+        EmitState();
     }
 
-
     //потерянна связь с оператором.
-    if(0)// (check_last_time && (micros() > last_cmd_time + 100000) )
+    //if (check_last_time && (micros() > last_cmd_time + 100000))
+    if (0)
     {
         //остановка машины.
         wheel_left.set_power(0.f);
@@ -167,7 +182,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         wheel_left.speed_control = false;
         enable_walk = false;
 
-        if (show_info) {
+        if (debug) {
             Serial.print("left_power: ");
             Serial.print(*((float *)&data[1]));
             Serial.print("\n");
@@ -180,7 +195,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         wheel_right.speed_control = false;
         enable_walk = false;
 
-        if (show_info) {
+        if (debug) {
             Serial.print("right_power: ");
             Serial.print(*((float *)&data[1]));
             Serial.print("\n");
@@ -217,16 +232,17 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
           float p,i,d;
         } * params((Params *)&data[1]);
 
-        Serial.print("SetPidSettings id:");
-        Serial.print(params->id);
-        Serial.print(" p:");
-        Serial.print(params->p);
-        Serial.print(" i:");
-        Serial.print(params->i);
-        Serial.print(" d:");
-        Serial.print(params->d);
-        Serial.print("\n");
-
+        if (debug){
+            Serial.print("SetPidSettings id:");
+            Serial.print(params->id);
+            Serial.print(" p:");
+            Serial.print(params->p);
+            Serial.print(" i:");
+            Serial.print(params->i);
+            Serial.print(" d:");
+            Serial.print(params->d);
+            Serial.print("\n");
+        }
 
         //установка пида угла
         if (params->id == 0){
@@ -249,7 +265,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         ((TurnAngleState *)turn_angle_state)->set_offset(*((float *)&data[1]));
     }
     else if ( data[0] == EnableDebug ){
-       show_info = (bool)data[1];
+       debug = (bool)data[1];
     }
     else if ( data[0] == SetWheelSpeed )
     {
@@ -258,11 +274,13 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
           int speed;
         } * params((Params *)&data[1]);
 
-        Serial.print("SetWheelSpeed id:");
-        Serial.print(params->id);
-        Serial.print(" speed:");
-        Serial.print(params->speed);
-        Serial.print("\n");
+        if (debug){
+            Serial.print("SetWheelSpeed id:");
+            Serial.print(params->id);
+            Serial.print(" speed:");
+            Serial.print(params->speed);
+            Serial.print("\n");
+        }
 
         if (params->id == 0){
             wheel_left.set_abs_speed(params->speed);
@@ -286,10 +304,12 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
           unsigned char angle;
         } * params((Params *)&data[1]);
 
-        Serial.print("SetServoAngle id:");
-        Serial.print(params->id);
-        Serial.print(" angle:");
-        Serial.println(params->angle);
+        if (debug){
+            Serial.print("SetServoAngle id:");
+            Serial.print(params->id);
+            Serial.print(" angle:");
+            Serial.println(params->angle);
+        }
 
         if (params->id == 0){
             servo1.write(params->angle);
@@ -297,11 +317,24 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         }else if (params->id == 1){
             servo2.write(params->angle);
         }else{
-            Serial.print("Wrong servo number:");
-            Serial.println(params->id);
+            if (debug){
+                Serial.print("Wrong servo number:");
+                Serial.println(params->id);
+            }
+        }
+    }
+    //включить вещание состояния
+    else if ( data[0] == SetInfoPeriod ){
+        unsigned long * period((unsigned long *)&data[1]);
+        
+        if (debug){
+            Serial.print("SetInfoPeriod period:");
+            Serial.println(*period);
         }
         
+        info_period.set_period(*period);
     }
+    
 
     //Запрос времени комманды.
     if ( !enable_walk )
@@ -329,7 +362,7 @@ void Car::update_distance()
 {
     if ( micros() > ud_start_time + US_TRIGER_TIMEOUT_MK )
     {       
-        distance_cm = ultrasonic.Ranging(CM);
+        ultrasonic.Ranging();
         ud_start_time = micros();
      }
 }

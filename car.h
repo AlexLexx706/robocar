@@ -5,6 +5,7 @@
 #include "my_pid.h"
 #include "period.h"
 #include <ServoTimer1.h>
+#include <helper_3dmath.h>
 
 //номера пинов
 #define US_TRIGER_PIN 7
@@ -25,6 +26,16 @@ class State;
 
 class Car
 {
+    struct InfoData{ //описывает структуру состояния
+        float giro_angles[3];
+        float gravity[3];
+        long distance_cm;
+        unsigned short left_wheel_spped;
+        unsigned short right_wheel_spped;
+        uint8_t servo_angle1_1;
+        uint8_t servo_angle1_2;
+    };
+    
 public:
     //комманды.
     enum CmdType{SetLeftWheelPower = 0,
@@ -37,7 +48,9 @@ public:
                  EnableDebug,
                  SetPowerOffset,
                  SetWheelSpeed, 
-                 SetServoAngle};
+                 SetServoAngle,
+                 SetInfoPeriod,
+                 AccInfo};
 
     Car();
     ~Car();
@@ -46,15 +59,15 @@ public:
     Wheel wheel_left;
     Wheel wheel_right;
     void process_command(uint8_t * data, uint8_t data_size);
-    float get_distance() const {return distance_cm;}
+    long get_distance() const {return ultrasonic.get_distance_cm();}
     void start_walk();
     void start_rotate(float angle);
     float giro_angles[3];
-    bool show_info;
+    VectorFloat gravity;
+    bool debug;
 
 private:
     unsigned long ud_start_time;
-    float distance_cm;
     Ultrasonic ultrasonic;
     unsigned long last_cmd_time;
     bool check_last_time;
@@ -70,8 +83,10 @@ private:
 
     ServoTimer1 servo1;
     ServoTimer1 servo2;
+    int update_count;
  
     void update_distance();
+    void EmitState();
 };
 
 void setup_dmp6();

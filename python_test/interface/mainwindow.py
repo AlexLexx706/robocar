@@ -6,8 +6,6 @@ from protocol import Protocol
 from cross_detector.ffmpeg_reader import FFmpegReader
 
 class MainWindow(QtGui.QMainWindow):
-    add_char = pyqtSignal(str)
-    add_line = pyqtSignal(str)
     new_frame = pyqtSignal("QImage")
     
     KEY_A = 65
@@ -37,9 +35,10 @@ class MainWindow(QtGui.QMainWindow):
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
         self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", False).toBool() else QtCore.Qt.Unchecked)
 
-        self.add_char.connect(self.on_add_char)
-        self.add_line.connect(self.on_add_line)
-        self.stop_log = False
+        #self.add_char.connect(self.on_add_char)
+        self.protocol.add_line.connect(self.on_add_line)
+        self.protocol.update_info.connect(self.on_update_info)
+        
         self.kay_states = {self.KEY_A: False,
                             self.KEY_W: False,
                             self.KEY_D: False,
@@ -53,6 +52,32 @@ class MainWindow(QtGui.QMainWindow):
         self.label_video.move_camera.connect(self.on_move_camera)
         self.camera_start_pos = None
         self.label_video.addAction(self.action_reset_camera)
+    
+    def on_update_info(self, data):
+        self.label_giro_x.setText("{:10.4f}".format(data[0]))
+        self.label_giro_y.setText("{:10.4f}".format(data[1]))
+        self.label_giro_z.setText("{:10.4f}".format(data[2]))
+        
+
+        self.label_acel_x.setText("{:10.4f}".format(data[3]))
+        self.label_acel_y.setText("{:10.4f}".format(data[4]))
+        self.label_acel_z.setText("{:10.4f}".format(data[5]))
+
+
+        self.label_distance.setText(str(data[6]))
+        
+        self.label_left_speed.setText(str(data[7]))
+        self.label_right_speed.setText(str(data[8]))
+        
+        self.label_servo_1.setText(str(data[9]))
+        self.label_servo_2.setText(str(data[10]))
+    
+    @pyqtSlot(bool)
+    def on_groupBox_update_state_toggled(self, state):
+        if not state:
+            self.protocol.set_info_period(0xffffffff)
+        else:
+            self.protocol.set_info_period(self.spinBox_info_period.value())
     
     @pyqtSlot(bool)
     def on_action_reset_camera_triggered(self, v):
@@ -223,33 +248,11 @@ class MainWindow(QtGui.QMainWindow):
             speed = int(self.lineEdit_speed.text())
 
             if self.protocol.connect("COM{}".format(self.spinBox_port_name.value()), speed):
-                self.stop_log = False
-                self.log_thread = threading.Thread(target=self.log_thread_proc)
-                self.log_thread.start()
                 self.pushButton_connect.setText(u"Отключить")
         else:
             self.pushButton_connect.setText(u"Подключить")
-            self.stop_log = True
-            self.log_thread.join()
             self.protocol.close()
     
-    def log_thread_proc(self):
-        try:
-            print "->"
-            line = ""
-            while not self.stop_log:
-                s = self.protocol.read()
-                if len(s) > 0:
-                    #self.add_char.emit(s)
-                    #self.add_line.emit(s)
-                    if s != "\n":
-                        line += s
-                    else:
-                        self.add_line.emit(line)
-                        line = ""
-        finally:
-            print "<-"
-
     @pyqtSlot("int")
     def on_spinBox_port_name_valueChanged(self, value):
         self.settings.setValue("port", value)
