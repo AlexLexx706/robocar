@@ -180,11 +180,6 @@ class MainWindow(QtGui.QMainWindow):
         self.plainTextEdit_log.appendPlainText(line)
         
 
-    @pyqtSlot()
-    def on_pushButton_clear_power_clicked(self):
-        self.set_left_wheel_power(0)
-        self.set_right_wheel_power(0)
-
     ###########################################
     @pyqtSlot("int")
     def on_horizontalSlider_left_wheel_valueChanged(self, value):
@@ -363,8 +358,12 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot()
     def on_pushButton_stop_clicked(self):
         self.set_offset(0)
+        self.set_left_wheel_power(0)
+        self.set_right_wheel_power(0)
         
-        
+    @pyqtSlot()
+    def on_pushButton_start_walk_clicked(self):
+        self.protocol.start_walk()
     
     @pyqtSlot("int")
     def on_dial_angle_valueChanged(self, value):

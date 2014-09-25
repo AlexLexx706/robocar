@@ -14,6 +14,9 @@ class Protocol(QtCore.QObject):
     
     CMD_SET_LEFT_WHEEL_POWER = 0
     CMD_SET_RIGTH_WHEEL_POWER = 1
+    CMD_SET_WHEELS_POWER = 2
+    CMD_SET_POWER_ZERRO = 3
+    CMD_START_WALK = 4
     CMD_PID_SETTINGS = 5
     CMD_ANGLE = 6
     CMD_ENABLE_DEBUG = 7
@@ -83,6 +86,22 @@ class Protocol(QtCore.QObject):
     def is_connected(self):
         return self.serial is not None
 
+    def set_wheels_power(self, l, r):
+        if self.serial is not None:
+            data = struct.pack("<Bff", self.CMD_SET_WHEELS_POWER, l, r)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+    
+    def set_power_zerro(self):
+        if self.serial is not None:
+            data = struct.pack("<B", self.CMD_SET_POWER_ZERRO)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+    
+    def start_walk(self):
+        if self.serial is not None:
+            data = struct.pack("<B", self.CMD_START_WALK)
+            self.serial.write(struct.pack("<B", len(data)) + data)
+
+        
     def set_pid_settings(self, type, p, i, d):
         if self.serial is not None:
             data = struct.pack("<BBfff", self.CMD_PID_SETTINGS, type, p, i, d)

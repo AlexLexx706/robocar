@@ -84,7 +84,7 @@ void Car::update()
 {
     wheel_left.update();
     wheel_right.update();
-    //update_distance();
+    update_distance();
     update_count++;
 
     //вещаем состояние.
@@ -361,7 +361,7 @@ void Car::start_rotate(float angle)
 void Car::update_distance()
 {
     if ( micros() > ud_start_time + US_TRIGER_TIMEOUT_MK )
-    {       
+    {   
         ultrasonic.Ranging();
         ud_start_time = micros();
      }

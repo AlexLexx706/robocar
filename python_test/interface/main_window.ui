@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>981</width>
-    <height>684</height>
+    <width>835</width>
+    <height>765</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -109,6 +109,12 @@
            <string>порт:</string>
           </property>
           <layout class="QGridLayout" name="gridLayout_2">
+           <property name="margin">
+            <number>4</number>
+           </property>
+           <property name="spacing">
+            <number>4</number>
+           </property>
            <item row="0" column="4">
             <widget class="QPushButton" name="pushButton_connect">
              <property name="text">
@@ -138,6 +144,12 @@
            </item>
            <item row="0" column="2">
             <widget class="QLineEdit" name="lineEdit_speed">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Speed&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
              </property>
@@ -149,12 +161,12 @@
           </layout>
          </widget>
         </item>
-        <item row="1" column="0">
+        <item row="2" column="0">
          <widget class="QGroupBox" name="groupBox_5">
           <property name="title">
            <string>Состояние:</string>
           </property>
-          <layout class="QVBoxLayout" name="verticalLayout_6">
+          <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
            <property name="spacing">
             <number>0</number>
            </property>
@@ -170,6 +182,12 @@
               <enum>QFrame::Raised</enum>
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
+              <property name="margin">
+               <number>4</number>
+              </property>
+              <property name="spacing">
+               <number>4</number>
+              </property>
               <item row="0" column="2">
                <widget class="QLabel" name="label_10">
                 <property name="text">
@@ -330,7 +348,7 @@
           </layout>
          </widget>
         </item>
-        <item row="2" column="0">
+        <item row="4" column="0">
          <widget class="QTabWidget" name="tabWidget">
           <property name="currentIndex">
            <number>0</number>
@@ -340,13 +358,6 @@
             <string>Основное</string>
            </attribute>
            <layout class="QVBoxLayout" name="verticalLayout_4">
-            <item>
-             <widget class="QCheckBox" name="checkBox_enable_debug">
-              <property name="text">
-               <string>Разрешить отладку</string>
-              </property>
-             </widget>
-            </item>
             <item>
              <widget class="QGroupBox" name="groupBox_update_state">
               <property name="title">
@@ -490,33 +501,6 @@
                   <string>левое:</string>
                  </property>
                 </widget>
-               </item>
-               <item row="3" column="0" colspan="3">
-                <layout class="QHBoxLayout" name="horizontalLayout">
-                 <property name="topMargin">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <spacer name="horizontalSpacer_2">
-                   <property name="orientation">
-                    <enum>Qt::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="pushButton_clear_power">
-                   <property name="text">
-                    <string>Сброс</string>
-                   </property>
-                  </widget>
-                 </item>
-                </layout>
                </item>
                <item row="0" column="0" colspan="3">
                 <widget class="QCheckBox" name="checkBox_enable_key_controll">
@@ -804,13 +788,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item>
-                  <widget class="QPushButton" name="pushButton_stop">
-                   <property name="text">
-                    <string>Стоп</string>
-                   </property>
-                  </widget>
-                 </item>
                 </layout>
                </item>
               </layout>
@@ -1016,6 +993,55 @@
           </widget>
          </widget>
         </item>
+        <item row="1" column="0">
+         <widget class="QGroupBox" name="groupBox_6">
+          <property name="title">
+           <string>Управление:</string>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_5">
+           <property name="margin">
+            <number>4</number>
+           </property>
+           <property name="spacing">
+            <number>4</number>
+           </property>
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pushButton_stop">
+             <property name="text">
+              <string>Остановка</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QPushButton" name="pushButton_start_walk">
+             <property name="text">
+              <string>Исследование</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <spacer name="horizontalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="0" column="2">
+            <widget class="QCheckBox" name="checkBox_enable_debug">
+             <property name="text">
+              <string>Разрешить отладку</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
        </layout>
       </widget>
      </widget>
@@ -1027,7 +1053,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>981</width>
+     <width>835</width>
      <height>21</height>
     </rect>
    </property>
