@@ -12,7 +12,6 @@ Car::Car():
     ud_start_time(millis()),
     wheel_left(LEFT_WHEEL_PWM_PIN, LEFT_WHEEL_DIRECTION_PIN, LEFT_WHEEL_SPEED_COUNTER_PIN),
     wheel_right(RIGTH_WHEEL_PWM_PIN, RIGTH_WHEEL_DIRECTION_PIN, RIGHT_WHEEL_SPEED_COUNTER_PIN),
-    ultrasonic(US_TRIGER_PIN, US_ECHO_PIN, US_MAX_DURATION_MK),
     last_cmd_time(0),
     check_last_time(false),
     enable_walk(false),
@@ -46,6 +45,9 @@ void Car::init(){
 
     servo1.write(98);
     servo2.write(68);
+    
+    //инициализация ультрасоника
+    us_int1.init(US_TRIGER_PIN);
 }
 
 Car::~Car()
@@ -68,7 +70,7 @@ void Car::EmitState(){
     data.gravity[2] = gravity.z;
 
     
-    data.distance_cm = ultrasonic.get_distance_cm();
+    data.distance_cm = us_int1.get_distance();
     data.left_wheel_spped = wheel_left.get_speed();
     data.right_wheel_spped = wheel_right.get_speed();
     data.servo_angle1_1 = servo1.read();
@@ -84,8 +86,8 @@ void Car::update()
 {
     wheel_left.update();
     wheel_right.update();
-    update_distance();
-    update_count++;
+    us_int1.update();
+    //update_count++;
 
     //вещаем состояние.
     if (info_period.isReady()){
@@ -358,11 +360,3 @@ void Car::start_rotate(float angle)
     enable_walk = true;
 }
 
-void Car::update_distance()
-{
-    if ( micros() > ud_start_time + US_TRIGER_TIMEOUT_MK )
-    {   
-        ultrasonic.Ranging();
-        ud_start_time = micros();
-     }
-}

@@ -6,6 +6,7 @@
 #include "Wire.h"
 #include <MsTimer2.h>
 #include <ServoTimer1.h>
+#include <UltrasonicInt1.h>
 
 static MPU6050 mpu;
 static bool dmpReady = false;  // set true if DMP init was successful

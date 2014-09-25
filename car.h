@@ -1,7 +1,7 @@
 #ifndef ALEX_CAR_H
 #define ALEX_CAR_H
 #include "Wheel.h"
-#include "Ultrasonic.h"
+#include <UltrasonicInt1.h>
 #include "my_pid.h"
 #include "period.h"
 #include <ServoTimer1.h>
@@ -9,7 +9,7 @@
 
 //номера пинов
 #define US_TRIGER_PIN 7
-#define US_ECHO_PIN 3
+
 #define US_TRIGER_TIMEOUT_MK 50000
 #define US_MAX_DURATION_MK 500000
 
@@ -59,7 +59,7 @@ public:
     Wheel wheel_left;
     Wheel wheel_right;
     void process_command(uint8_t * data, uint8_t data_size);
-    long get_distance() const {return ultrasonic.get_distance_cm();}
+    long get_distance() const {return us_int1.get_distance();}
     void start_walk();
     void start_rotate(float angle);
     float giro_angles[3];
@@ -68,7 +68,6 @@ public:
 
 private:
     unsigned long ud_start_time;
-    Ultrasonic ultrasonic;
     unsigned long last_cmd_time;
     bool check_last_time;
     bool enable_walk;
@@ -84,8 +83,7 @@ private:
     ServoTimer1 servo1;
     ServoTimer1 servo2;
     int update_count;
- 
-    void update_distance();
+
     void EmitState();
 };
 
