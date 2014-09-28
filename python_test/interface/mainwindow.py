@@ -52,6 +52,7 @@ class MainWindow(QtGui.QMainWindow):
         self.label_video.move_camera.connect(self.on_move_camera)
         self.camera_start_pos = None
         self.label_video.addAction(self.action_reset_camera)
+        self.plainTextEdit_log.addAction(self.action_clear)
     
     def on_update_info(self, data):
         self.label_giro_x.setText("{:10.4f}".format(data[0]))
@@ -68,9 +69,12 @@ class MainWindow(QtGui.QMainWindow):
         
         self.label_left_speed.setText(str(data[7]))
         self.label_right_speed.setText(str(data[8]))
-        
-        self.label_servo_1.setText(str(data[9]))
-        self.label_servo_2.setText(str(data[10]))
+
+        self.label_left_count.setText(str(data[9]))
+        self.label_right_count.setText(str(data[10]))
+
+        self.label_servo_1.setText(str(data[11]))
+        self.label_servo_2.setText(str(data[12]))
     
     @pyqtSlot(bool)
     def on_groupBox_update_state_toggled(self, state):
@@ -178,7 +182,10 @@ class MainWindow(QtGui.QMainWindow):
     
     def on_add_line(self, line):
         self.plainTextEdit_log.appendPlainText(line)
-        
+    
+    @pyqtSlot(bool)
+    def on_action_clear_triggered(self, v):
+        self.plainTextEdit_log.clear()
 
     ###########################################
     @pyqtSlot("int")
@@ -230,8 +237,9 @@ class MainWindow(QtGui.QMainWindow):
 
     ######################################################################
     @pyqtSlot()
-    def on_pushButton_send_clicked(self):
+    def on_lineEdit_text_editingFinished(self):
         self.protocol.write(str(self.lineEdit_text.text()))
+        self.lineEdit_text.setText("")
     
     @pyqtSlot("QString")
     def on_lineEdit_speed_textChanged(self, text):

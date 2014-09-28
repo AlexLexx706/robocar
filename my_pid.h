@@ -4,22 +4,21 @@
 class PID
 {
 public:
-    PID(double * error, double * power, double p, double i, double d);
+    PID(float * error, float * power, float p, float i, float d);
     void Compute();
-    void SetOutputLimits(double min, double max);
-    void SetTunings(double p, double i, double d);
+    void SetOutputLimits(float min, float max);
+    void SetTunings(float p, float i, float d);
 private:
-    double kp;
-    double ki;
-    double kd;
-    double * error;
-    double * output;
-    double  prew_error;
-    double ci;
+    float kp;
+    float ki;
+    float kd;
+    float * error;
+    float * output;
+    float  prew_error;
+    float ci;
     bool first;
-
-    unsigned long prew_time;
-    double out_min, out_max;
+    float out_min, out_max;
+    float dt;
 };
 #endif
 

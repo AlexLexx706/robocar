@@ -30,8 +30,10 @@ class Car
         float giro_angles[3];
         float gravity[3];
         long distance_cm;
-        unsigned short left_wheel_spped;
-        unsigned short right_wheel_spped;
+        long left_wheel_spped;
+        long right_wheel_spped;
+        long left_wheel_count;
+        long right_wheel_count;
         uint8_t servo_angle1_1;
         uint8_t servo_angle1_2;
     };
@@ -60,8 +62,6 @@ public:
     Wheel wheel_right;
     void process_command(uint8_t * data, uint8_t data_size);
     long get_distance() const {return us_int1.get_distance();}
-    void start_walk();
-    void start_rotate(float angle);
     float giro_angles[3];
     VectorFloat gravity;
     bool debug;
@@ -69,7 +69,6 @@ public:
 private:
     unsigned long ud_start_time;
     unsigned long last_cmd_time;
-    bool check_last_time;
     bool enable_walk;
     float max_walk_power;
     float min_distance;
@@ -79,6 +78,7 @@ private:
     State * move_back_state;
     State * turn_angle_state;
     Period info_period;
+    Period control_period;
 
     ServoTimer1 servo1;
     ServoTimer1 servo2;
@@ -86,8 +86,4 @@ private:
 
     void EmitState();
 };
-
-void setup_dmp6();
-void update_dmp6(float euler[3]);
-
 #endif

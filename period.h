@@ -22,6 +22,8 @@ public:
         st = ct;
         return true;
     }
+    
+    void reset() {st = micros();}
 
     void set_period(unsigned long duration_ms){
         duration = duration_ms;

@@ -57,6 +57,7 @@ void TurnState::start(void * param)
         car.wheel_left.set_power(-max_power);
         car.wheel_right.set_power(max_power);
     }
+    //поворот на право
     else
     {
         car.wheel_left.set_power(max_power);
@@ -130,11 +131,11 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     set_point(0.f),
     error(0.f),
     power(0.f),
-    myPID(new PID(&error, &power, 2, 0, 0.35)),
+    myPID(&error, &power, 2, 0, 0.35),
     power_offset(0.)
     
 {
-    myPID->SetOutputLimits(-1, 1);
+    myPID.SetOutputLimits(-1, 1);
     direction[0] = 0.f;
     direction[1] = 1.f;
 }
@@ -150,10 +151,7 @@ void TurnAngleState::set_params(float p, float i, float d)
         Serial.print(d, 4);
         Serial.print("\n");
     }
-  
-    delete myPID;
-    myPID = new PID(&error, &power, p, i, d);
-    myPID->SetOutputLimits(-1, 1);
+    myPID.SetTunings(p, i, d);
 }
 
 void TurnAngleState::set_angle(float c_angle)
@@ -187,7 +185,7 @@ void TurnAngleState::start(void * param)
 
 float TurnAngleState::get_direction()
 {
-    float cur_direction[2] = {cos(double(car.giro_angles[0])), sin(double(car.giro_angles[0]))};
+    float cur_direction[2] = {cos(float(car.giro_angles[0])), sin(float(car.giro_angles[0]))};
     float perp_direction[2] = {-cur_direction[1], cur_direction[0]};
     float angle = acos(ad_vo_scalprod(2, cur_direction, direction));
 
@@ -206,7 +204,7 @@ State::ProcessState TurnAngleState::process()
     
     //рассчёт угла и направления поворота.
     error = get_direction();
-    myPID->Compute();
+    myPID.Compute();
     if (power >= 0 )
     {
         car.wheel_left.set_power(-power + power_offset);

@@ -1,6 +1,7 @@
 #ifndef _CarState_H
 #define _CarState_H
 #include "my_pid.h"
+#include <Arduino.h>
 
 class Car;
 class PID;
@@ -74,6 +75,17 @@ private:
 class TurnAngleState: public State
 {
 public:
+    struct StartParams{
+        //использовать абсолютный угол
+        boolean use_abs_angle;
+
+        //значение угла радианы
+        float angle;
+        
+        //скорость вращения радиан/секунду.
+        unsigned long angle_speed;
+    };
+
     TurnAngleState(Car & car, float max_window,  float min_window, float max_power, float min_power);
     virtual void start(void * param);
     virtual ProcessState process();
@@ -85,12 +97,12 @@ public:
     
 private:
     float direction[2];
-    double angle;
-    double set_point;
-    double error;
-    double power;
-    double power_offset;
-    PID * myPID;
+    float angle;
+    float set_point;
+    float error;
+    float power;
+    float power_offset;
+    PID myPID;
 };
 
 

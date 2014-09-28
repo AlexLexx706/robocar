@@ -2,13 +2,12 @@
 
 #define MAX_COUNT 1500
 
-Wheel::Wheel(int _pwm_pin, int _direction_pin, int __speed_counter_pin):
+Wheel::Wheel(int _pwm_pin, int _direction_pin):
     speed(0),
     pid(&error, &pid_power, 0.0001, 0, 0.00001),
     speed_control(false),
     pwm_pin(_pwm_pin),
     direction_pin(_direction_pin),
-    speed_counter_pin(__speed_counter_pin),
     power(0.0),
     abs_speed(30),
     pid_power(0.0),
@@ -21,33 +20,9 @@ Wheel::Wheel(int _pwm_pin, int _direction_pin, int __speed_counter_pin):
     pinMode(direction_pin, OUTPUT);
     digitalWrite(pwm_pin, LOW);
     digitalWrite(direction_pin, LOW);
-    
-    //прочитаем состояние пина
-    pinMode(speed_counter_pin, INPUT);
-    speed_pin_state = digitalRead(speed_counter_pin);
 }
 
-void Wheel::updata_count(){
-    int cs = digitalRead(speed_counter_pin);
-
-    //есть изменение, начало счёта 
-    if (cs != speed_pin_state){
-        speed_pin_state = cs;
-        speed = count;
-        count = 0;
-    //счетаем
-    }else{
-        count++;
-
-        //состояние долго не меняется достигли максимума
-        if (count >= MAX_COUNT){
-            count = MAX_COUNT;
-            speed = count;
-        }
-    }
-}
-
-void Wheel::set_power(double value)
+void Wheel::set_power(float value)
 {
     if (value > 1. )
         value = 1.;
@@ -81,7 +56,7 @@ void Wheel::set_power(double value)
 
 void Wheel::update()
 {
-    int speed = get_speed();
+    long speed = get_speed();
     error = speed - abs(abs_speed);
 
     if ( speed_control )
@@ -96,7 +71,7 @@ void Wheel::update()
             Serial.print(pid_power);
             Serial.print("\n");
         }
-        double cur_power;
+        float cur_power;
         if (abs_speed > 0){
             cur_power = power + pid_power;
 

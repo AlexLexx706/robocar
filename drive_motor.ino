@@ -4,7 +4,7 @@
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #include "Wire.h"
-#include <MsTimer2.h>
+#include <PinChangeInt.h>
 #include <ServoTimer1.h>
 #include <UltrasonicInt1.h>
 
@@ -12,7 +12,7 @@ static MPU6050 mpu;
 static bool dmpReady = false;  // set true if DMP init was successful
 static uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 static uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-static uint16_t fifoCount;     // count of all bytes currently in FIFO
+static uint16_t fifoCount =0;     // count of all bytes currently in FIFO
 static uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
@@ -30,9 +30,13 @@ void dmpDataReady()
 
 void update_wheel_speed()
 {
-    car.wheel_left.updata_count();
-    car.wheel_right.updata_count();
+    if (PCintPort::arduinoPin == LEFT_WHEEL_SPEED_COUNTER_PIN)
+        car.wheel_left.updata_count();
+    else
+        car.wheel_right.updata_count();
 }
+
+
 
 void update_dmp6()
 {
@@ -105,12 +109,13 @@ void setup()
         dmpReady = true;
         packetSize = mpu.dmpGetFIFOPacketSize();
     }
-    
-    //запуск счёта скорости
-    MsTimer2::set(0, update_wheel_speed);
-    MsTimer2::start();
-    
     car.init();
+
+    //инициализация подсчёта скорости     
+    pinMode(LEFT_WHEEL_SPEED_COUNTER_PIN, INPUT); digitalWrite(LEFT_WHEEL_SPEED_COUNTER_PIN, HIGH);
+    PCintPort::attachInterrupt(LEFT_WHEEL_SPEED_COUNTER_PIN, &update_wheel_speed, FALLING);
+    pinMode(RIGHT_WHEEL_SPEED_COUNTER_PIN, INPUT); digitalWrite(RIGHT_WHEEL_SPEED_COUNTER_PIN, HIGH);
+    PCintPort::attachInterrupt(RIGHT_WHEEL_SPEED_COUNTER_PIN, &update_wheel_speed, FALLING);
 }
 
 void loop() 
