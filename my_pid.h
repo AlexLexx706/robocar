@@ -8,6 +8,7 @@ public:
     void Compute();
     void SetOutputLimits(float min, float max);
     void SetTunings(float p, float i, float d);
+    void Reset();
 private:
     float kp;
     float ki;

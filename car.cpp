@@ -5,8 +5,6 @@
 #include "CarStates.h"
 #include <Arduino.h>
 
-#define PI 3.14159265
-
 Car::Car():
     ud_start_time(millis()),
     wheel_left(LEFT_WHEEL_PWM_PIN, LEFT_WHEEL_DIRECTION_PIN),
@@ -173,13 +171,13 @@ void Car::update()
 
             TurnState::Direction dir(TurnState::Left);
             cur_state->start(&dir);
-        }
+        }/**
         else if (cur_state->get_type() == State::TurnAngle)
         {
             cur_state = turn_angle_state;
             float angle(0.0);
             cur_state->start(&angle);
-        }
+        }**/
     //потеря связи с оператором
     }else if (control_period.isReady()){
         wheel_left.set_power(0.f);
@@ -289,8 +287,13 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     //установка ориентации
     else if ( data[0] == SetAngle )
     {
+        TurnAngleState::StartParams s_p;
+        s_p.angle = *(float*)(&data[1]);
+        s_p.use_abs_angle = true;
+        s_p.angle_speed = PI / 180.f * 80.f;
+
         cur_state = turn_angle_state;
-        cur_state->start(&data[1]);
+        cur_state->start(&s_p);
         enable_walk = true;
     }
     //установка смещения

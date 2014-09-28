@@ -127,7 +127,6 @@ State::ProcessState MoveBackState::process()
 ///////////////////////////////////////////////////////////////////////////////////
 TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window, float _max_power, float _min_power):
     State(car, State::TurnAngle),
-    angle(0.f),
     set_point(0.f),
     error(0.f),
     power(0.f),
@@ -136,35 +135,11 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     
 {
     myPID.SetOutputLimits(-1, 1);
-    direction[0] = 0.f;
-    direction[1] = 1.f;
 }
 
 void TurnAngleState::set_params(float p, float i, float d)
 {
-    if (car.debug) {
-        Serial.print("set_params p:");
-        Serial.print(p, 4);
-        Serial.print(" i:");
-        Serial.print(i, 4);
-        Serial.print(" d:");
-        Serial.print(d, 4);
-        Serial.print("\n");
-    }
     myPID.SetTunings(p, i, d);
-}
-
-void TurnAngleState::set_angle(float c_angle)
-{
-    if (car.debug) {
-        Serial.print("set_angle angle:");
-        Serial.print(c_angle, 4);
-        Serial.print("\n");
-    }
-    
-    angle = c_angle;
-    direction[0] = cos(angle);
-    direction[1] = sin(angle);
 }
 
 void TurnAngleState::set_offset(float offset)
@@ -174,18 +149,56 @@ void TurnAngleState::set_offset(float offset)
 
 void TurnAngleState::start(void * param)
 {
-    //установим угол.
-    if (param)
-        set_angle(*((float *)(param)));
+    StartParams * s_params((StartParams *)param);
+
+    //использовать абсолютный угол
+    myPID.Reset();
+
+    start_angle = car.giro_angles[0];
+    float dest_angle;
+
+    if (s_params->use_abs_angle){
+        dest_angle = s_params->angle;
+    //относителный угол
+    }else{
+        dest_angle = start_angle  + s_params->angle;
+    }
+
+    //рассчитаем шаг угла и количество итераций.
+    float error = get_error(start_angle, dest_angle);
+    float time = abs(error) / s_params->angle_speed;
+    common_count = (unsigned long)(time / 0.01);
+    cur_count = 0;
+    angle_step = error / common_count;
+    stable_window = 100;
+    error_window = PI / 180.f * 10.f;
+    
+    //распечатаем значения.
+    if (car.debug){
+        Serial.print("use_abs_angle: ");
+        Serial.print(s_params->use_abs_angle);
+        Serial.print("\nstart_angle: ");
+        Serial.print(start_angle);
+        Serial.print("\ndest_angle: ");
+        Serial.print(dest_angle);
+        Serial.print("\nerror: ");
+        Serial.print(error);
+        Serial.print("\nspeed: ");
+        Serial.print(s_params->angle_speed);
+        Serial.print("\ncommon_count: ");
+        Serial.print(common_count);
+        Serial.print("\n");
+    }
 
     car.wheel_left.set_power(0);
     car.wheel_right.set_power(0);
     State::start(param);
 }
 
-float TurnAngleState::get_direction()
+float TurnAngleState::get_error(float start, float end)
 {
-    float cur_direction[2] = {cos(float(car.giro_angles[0])), sin(float(car.giro_angles[0]))};
+    float direction[2] = {cos(end), sin(end)};
+    float cur_direction[2] = {cos(start), sin(start)};
     float perp_direction[2] = {-cur_direction[1], cur_direction[0]};
     float angle = acos(ad_vo_scalprod(2, cur_direction, direction));
 
@@ -203,18 +216,52 @@ State::ProcessState TurnAngleState::process()
         return Failed;
     
     //рассчёт угла и направления поворота.
-    error = get_direction();
+    cur_count++;
+    float angle;
+
+    //изменеение угла
+    if (cur_count <= common_count){
+        angle = start_angle + angle_step * cur_count;
+    }else {
+        angle = start_angle + angle_step * common_count;
+    }
+    
+    error = get_error(car.giro_angles[0], angle);
+   
+    //проверка завершения
+    if (cur_count == common_count + stable_window){
+        car.wheel_left.set_power(0);
+        car.wheel_right.set_power(0);
+        is_active = false;
+
+        //всё ок уложились в окно
+        if (abs(error) <= error_window){
+            if (car.debug){
+                Serial.print("error: ");
+                Serial.print(error);
+                Serial.print("\n Turn OK\n");
+            }
+            return Ok;
+        }
+        if (car.debug){
+            Serial.print("error: ");
+            Serial.print(error);
+            Serial.print("\n Turn Failed\n");
+        }
+        return Failed;
+    }
+
     myPID.Compute();
+
     if (power >= 0 )
     {
         car.wheel_left.set_power(-power + power_offset);
         car.wheel_right.set_power(power + power_offset);
-        return InProgress;
     }
     else
     {
         car.wheel_left.set_power(-power + power_offset);
         car.wheel_right.set_power(power + power_offset);
-        return InProgress;
     }
+    return InProgress;
 }

@@ -49,3 +49,8 @@ void PID::SetTunings( float p, float i, float d){
     kd = d;
     first = true;
 }
+
+void PID::Reset(){
+    first = true;
+}
+

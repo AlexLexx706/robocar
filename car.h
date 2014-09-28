@@ -22,6 +22,8 @@
 #define LEFT_WHEEL_SPEED_COUNTER_PIN 4
 #define RIGHT_WHEEL_SPEED_COUNTER_PIN A0
 
+#define PI 3.14159265
+
 class State;
 
 class Car

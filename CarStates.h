@@ -83,26 +83,29 @@ public:
         float angle;
         
         //скорость вращения радиан/секунду.
-        unsigned long angle_speed;
+        float angle_speed;
     };
 
     TurnAngleState(Car & car, float max_window,  float min_window, float max_power, float min_power);
     virtual void start(void * param);
     virtual ProcessState process();
-    float get_direction();
+    float get_error(float start, float end);
     void set_params(float p, float i, float d);
-    void set_angle(float angle);
     void set_offset(float offset);
     
-    
 private:
-    float direction[2];
-    float angle;
     float set_point;
     float error;
     float power;
     float power_offset;
     PID myPID;
+    
+    float start_angle;
+    float angle_step;
+    unsigned long cur_count;
+    unsigned long common_count;
+    unsigned long stable_window;
+    float error_window;
 };
 
 
