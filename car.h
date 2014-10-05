@@ -30,8 +30,8 @@ class Car
 {
     struct InfoData{ //описывает структуру состояния
         float giro_angles[3];
-        float gravity[3];
-        long distance_cm;
+        int16_t acell[3];
+        float distance_cm;
         long left_wheel_spped;
         long right_wheel_spped;
         long left_wheel_count;
@@ -63,17 +63,15 @@ public:
     Wheel wheel_left;
     Wheel wheel_right;
     void process_command(uint8_t * data, uint8_t data_size);
-    long get_distance() const {return us_int1.get_distance();}
+    float get_distance() const {return us_int1.get_distance();}
     float giro_angles[3];
-    VectorFloat gravity;
+    int16_t acell[3];
     bool debug;
 
 private:
     unsigned long ud_start_time;
     unsigned long last_cmd_time;
     bool enable_walk;
-    float max_walk_power;
-    float min_distance;
     State * cur_state;
     State * move_forward_state;
     State * turn_state;
@@ -81,6 +79,7 @@ private:
     State * turn_angle_state;
     Period info_period;
     Period control_period;
+    Period update_period;
 
     ServoTimer1 servo1;
     ServoTimer1 servo2;

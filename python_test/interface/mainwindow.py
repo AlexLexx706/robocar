@@ -4,6 +4,11 @@ from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
 from protocol import Protocol
 from cross_detector.ffmpeg_reader import FFmpegReader
+import pyqtgraph as pg
+import numpy as np
+import math
+from robot_scene import RobotScene
+from robot_scene import RobotScene
 
 class MainWindow(QtGui.QMainWindow):
     new_frame = pyqtSignal("QImage")
@@ -44,8 +49,9 @@ class MainWindow(QtGui.QMainWindow):
                             self.KEY_D: False,
                             self.KEY_S: False}
         
-        self.new_frame.connect(self.on_new_frame)
-        threading.Thread(target=self.read_frame).start()
+        #обновление камеры 
+        #self.new_frame.connect(self.on_new_frame)
+        #threading.Thread(target=self.read_frame).start()
         
         #подключим управление камерой через мышку
         self.label_video.start_move_camera.connect(self.on_start_move_camera)
@@ -53,25 +59,81 @@ class MainWindow(QtGui.QMainWindow):
         self.camera_start_pos = None
         self.label_video.addAction(self.action_reset_camera)
         self.plainTextEdit_log.addAction(self.action_clear)
+        
+        #Добавим графики
+        self.win = pg.GraphicsWindow()
+        self.verticalLayout_10.addWidget(self.win)
+
+        self.cur_plot = self.win.addPlot(title="Updating plot")
+        self.curves = [self.cur_plot.plot(pen=(255,0,0)),
+                       self.cur_plot.plot(pen=(0,255,0)),
+                       self.cur_plot.plot(pen=(0,0,255))]
+
+        #self.data = np.random.normal(size=(10,1000))
+        self.data_list = [[0.0 for i in range(1000)], [0 for i in range(1000)], [0 for i in range(1000)]]
+        self.first = True
+        
+        self.scene = RobotScene()
+        self.graphicsView.setScene(self.scene)
+        self.graphicsView.addAction(self.action_clear_map)
+
+    @pyqtSlot(bool)
+    def on_action_clear_map_triggered(self, v):
+        self.scene.clear_map()
+    
+    @pyqtSlot(int)
+    def on_checkBox_folow_robot_stateChanged(self, state):
+        self.scene.set_follow_robot(QtCore.Qt.Checked == state)
+    
+    def update(self, data):
+        K  = 0.05
+        self.data_list[0] = self.data_list[0][1:]
+        self.data_list[0].append((1.0 - K) * self.data_list[0][-1] + K * data[0])
+        self.curves[0].setData(self.data_list[0])
+
+        self.data_list[1] = self.data_list[1][1:]
+        self.data_list[1].append((1.0 - K) * self.data_list[1][-1] + K * data[1])
+        self.curves[1].setData(self.data_list[1])
+
+        v = self.data_list[0][-1] / math.cos(math.atan(self.data_list[1][-1] / self.data_list[0][-1]))
+        
+        self.data_list[2] = self.data_list[2][1:]
+        self.data_list[2].append(v)
+        self.curves[2].setData(self.data_list[2])
+        
+        
+        #
+        #for i, v in enumerate(data):
+        #    self.data_list[i] = self.data_list[i][1:]
+        #    
+        #    #применим фильтр низкой частоты
+        #    v = (1 - K) * self.data_list[i][-1] + K * v
+        #    self.data_list[i].append(v)
+        #    self.curves[i].setData(self.data_list[i])
+
+        if self.first:
+            self.cur_plot.enableAutoRange('xy', False)  ## stop auto-scaling after the first data set is plotted
+            self.first = False
+        
     
     def on_update_info(self, data):
+        self.update(data[3:6])
         self.label_giro_x.setText("{:10.4f}".format(data[0]))
         self.label_giro_y.setText("{:10.4f}".format(data[1]))
         self.label_giro_z.setText("{:10.4f}".format(data[2]))
         
 
-        self.label_acel_x.setText("{:10.4f}".format(data[3]))
-        self.label_acel_y.setText("{:10.4f}".format(data[4]))
-        self.label_acel_z.setText("{:10.4f}".format(data[5]))
-
-
-        self.label_distance.setText(str(data[6]))
+        self.label_acel_x.setText("{:10}".format(data[3]))
+        self.label_acel_y.setText("{:10}".format(data[4]))
+        self.label_acel_z.setText("{:10}".format(data[5]))
+        self.label_distance.setText("{:10.4f}".format(data[6]))
         
         self.label_left_speed.setText(str(data[7]))
         self.label_right_speed.setText(str(data[8]))
 
         self.label_left_count.setText(str(data[9]))
         self.label_right_count.setText(str(data[10]))
+        self.scene.update_wheel_count(data[9], data[10], data[0])
 
         self.label_servo_1.setText(str(data[11]))
         self.label_servo_2.setText(str(data[12]))
@@ -115,8 +177,8 @@ class MainWindow(QtGui.QMainWindow):
             #print self.kay_states
             l = 0.0
             r = 0.0
-            max_speed = 0.7
-            rotate_koef = 0.8
+            max_speed = 0.5
+            rotate_koef = 0.5
             
             #вперёд
             if self.kay_states[self.KEY_W]:

@@ -50,7 +50,7 @@ class Protocol(QtCore.QObject):
 
                             #получили новые данные о состояние.
                             if acc == self.ACC_INFO:
-                                self.last_info = struct.unpack('<fffffflllllBB', data)
+                                self.last_info = struct.unpack('<fffhhhfllllBB', data)
                                 self.update_info.emit(self.last_info)
                         except Exception as e:
                             logging.error(str(e))

@@ -55,7 +55,10 @@ void update_dmp6()
 
     // check for overflow (this should never happen unless our code is too inefficient)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024)
+    {
+        Serial.println("overflow!!!!!");
         mpu.resetFIFO();
+    }
 
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
     else if (mpuIntStatus & 0x02)
@@ -72,10 +75,9 @@ void update_dmp6()
         
         mpu.dmpGetQuaternion(&q, fifoBuffer);
         mpu.dmpGetEuler(car.giro_angles, &q);
-        mpu.dmpGetGravity(&car.gravity, &q);        
+        mpu.dmpGetAccel(car.acell, fifoBuffer);        
     }
 }
-
 
 
 void setup() 

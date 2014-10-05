@@ -11,12 +11,11 @@ Car::Car():
     wheel_right(RIGTH_WHEEL_PWM_PIN, RIGTH_WHEEL_DIRECTION_PIN),
     last_cmd_time(0),
     enable_walk(false),
-    max_walk_power(0.5),
-    min_distance(20),
     debug(false),
     info_period(0xffffffff),
     update_count(0),
-    control_period(1000000)
+    control_period(1000000),
+    update_period(1000000)
 { 
     move_forward_state = new MoveForwardState(*this, 0.6, 15.f);
     turn_state = new TurnState(*this,  500000, 15.f, 0.4);
@@ -60,11 +59,10 @@ void Car::EmitState(){
     data.giro_angles[0] = giro_angles[0];
     data.giro_angles[1] = giro_angles[1];
     data.giro_angles[2] = giro_angles[2];
-    
 
-    data.gravity[0] = gravity.x;
-    data.gravity[1] = gravity.y;
-    data.gravity[2] = gravity.z;
+    data.acell[0] = acell[0];
+    data.acell[1] = acell[1];
+    data.acell[2] = acell[2];
 
     data.distance_cm = us_int1.get_distance();
  
@@ -90,19 +88,22 @@ void Car::update()
 
     //обновление дальномера
     us_int1.update();
-    //update_count++;
 
     //вещаем состояние.
     if (info_period.isReady()){
         EmitState();
-        
-        
-        //if (debug){
-        //    Serial.print("update_count: ");
-        //    Serial.println(update_count);
-        //}
-        //update_count = 0;
     }
+    
+    if (debug){
+        update_count++;
+        
+        if (update_period.isReady()){
+            Serial.print("update_count: ");
+            Serial.println(update_count);
+            update_count = 0;
+        }
+    }
+    
 
     //алгоритм обхода препятствий.
     if ( enable_walk )
@@ -290,7 +291,7 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
         TurnAngleState::StartParams s_p;
         s_p.angle = *(float*)(&data[1]);
         s_p.use_abs_angle = true;
-        s_p.angle_speed = PI / 180.f * 80.f;
+        s_p.angle_speed = PI / 180.f * 90.f;
 
         cur_state = turn_angle_state;
         cur_state->start(&s_p);
