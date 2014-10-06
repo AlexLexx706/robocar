@@ -13,7 +13,8 @@ Wheel::Wheel(int _pwm_pin, int _direction_pin):
     pid_power(0.0),
     error(0.0),
     info_period(1000000),
-    count(0)
+    count(0),
+    sign(1)
 {
     pid.SetOutputLimits(-1,1);
     pinMode(pwm_pin, OUTPUT);
@@ -37,13 +38,13 @@ void Wheel::set_power(float value)
         {
             analogWrite(pwm_pin, int(value * 255));
             digitalWrite(direction_pin, LOW);
-
-
+            sign = 1;
         }
         else if ( value < 0.f )
         {
             analogWrite(pwm_pin, int(value * 255));
             digitalWrite(direction_pin, HIGH);
+            sign = 0;
         }
         else
         {

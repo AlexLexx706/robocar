@@ -77,6 +77,13 @@ class MainWindow(QtGui.QMainWindow):
         self.graphicsView.setScene(self.scene)
         self.graphicsView.addAction(self.action_clear_map)
 
+        self.wheel_timer = QtCore.QTimer()
+        self.wheel_timer.timeout.connect(self.on_update_wheels)
+        self.wheel_timer.setInterval(100)
+        self.wheel_timer.setSingleShot(False)
+        self.l = 0.0
+        self.r = 0.0
+
     @pyqtSlot(bool)
     def on_action_clear_map_triggered(self, v):
         self.scene.clear_map()
@@ -175,41 +182,48 @@ class MainWindow(QtGui.QMainWindow):
     def update_car_controll(self):
         if self.is_enable_key_controll():
             #print self.kay_states
-            l = 0.0
-            r = 0.0
+            self.l = 0.0
+            self.r = 0.0
             max_speed = 0.5
             rotate_koef = 0.5
             
             #вперёд
             if self.kay_states[self.KEY_W]:
-                l = max_speed
-                r = max_speed
+                self.l = max_speed
+                self.r = max_speed
             #назад
             elif self.kay_states[self.KEY_S]:
-                l = -max_speed
-                r = -max_speed
+                self.l = -max_speed
+                self.r = -max_speed
 
             #лево
             if self.kay_states[self.KEY_A]:
                 if self.kay_states[self.KEY_W]:
-                    l = 0
+                    self.l = 0
                 elif  self.kay_states[self.KEY_S]:
-                    l = 0
+                    self.l = 0
                 else:
-                    r = max_speed * rotate_koef
-                    l = -max_speed * rotate_koef
+                    self.r = max_speed * rotate_koef
+                    self.l = -max_speed * rotate_koef
             #право
             if self.kay_states[self.KEY_D]:
                 if self.kay_states[self.KEY_W]:
-                    r = 0
+                    self.r = 0
                 elif self.kay_states[self.KEY_S]:
-                    r = 0
+                    self.r = 0
                 else:
-                    r = -max_speed * rotate_koef
-                    l = max_speed * rotate_koef
-            
-            self.protocol.set_left_wheel_power(l)
-            self.protocol.set_right_wheel_power(r)
+                    self.r = -max_speed * rotate_koef
+                    self.l = max_speed * rotate_koef
+
+            self.on_update_wheels()
+            self.wheel_timer.stop()
+
+            if self.r != 0 or self.l != 0:
+                self.wheel_timer.start()
+    
+    def on_update_wheels(self):
+        self.protocol.set_left_wheel_power(self.l)
+        self.protocol.set_right_wheel_power(self.r)
 
     def is_enable_key_controll(self):
         return self.checkBox_enable_key_controll.isChecked()
@@ -227,14 +241,15 @@ class MainWindow(QtGui.QMainWindow):
         #wm_keydown
         if message.message == 0x0100:
             if message.wParam in self.CHECKED_KEYS:
-                self.kay_states[message.wParam] = True
-                self.update_car_controll()
+                if not self.kay_states[message.wParam]:
+                    self.kay_states[message.wParam] = True
+                    self.update_car_controll()
         #wm_keyup
         elif message.message == 0x0101:
             if message.wParam in self.CHECKED_KEYS:
-                self.kay_states[message.wParam] = False
-                self.update_car_controll()
-
+                if self.kay_states[message.wParam]:
+                    self.kay_states[message.wParam] = False
+                    self.update_car_controll()
         return QtGui.QMainWindow.winEvent(self, message)
     
     def on_add_char(self, s):

@@ -4,6 +4,8 @@
 #include "my_pid.h"
 #include "period.h"
 
+#define MIN_UPDATE_COUNT_PERIOD_MKS 12500
+
 class Wheel
 {
 public:
@@ -29,8 +31,14 @@ public:
 
     inline void updata_count() { 
         unsigned long ct = micros();
+        
+        //ложное срабатывание
+        if ((ct - cur_time) < MIN_UPDATE_COUNT_PERIOD_MKS){
+            cur_time = ct;
+            return;
+        }
 
-        if (power >= 0)
+        if (sign)
             count++;
         else
             count--;
@@ -52,6 +60,7 @@ private:
     float pid_power;
     float error;
     Period info_period;
+    byte sign;
 
     int take_count() {
         int res;
