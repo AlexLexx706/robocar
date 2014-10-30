@@ -124,7 +124,7 @@ class MainWindow(QtGui.QMainWindow):
         
     
     def on_update_info(self, data):
-        self.update(data[3:6])
+        #self.update(data[3:6])
         self.label_giro_x.setText("{:10.4f}".format(data[0]))
         self.label_giro_y.setText("{:10.4f}".format(data[1]))
         self.label_giro_z.setText("{:10.4f}".format(data[2]))

@@ -122,7 +122,7 @@ void setup()
 
 void loop() 
 {
-    update_dmp6();
+    //update_dmp6();
     car.update();
 
     //чтение данных из ком порта
