@@ -5,8 +5,34 @@ import logging
 import threading
 from PyQt4 import QtCore
 from PyQt4.QtCore import pyqtSignal
+import time
+import socket
+#from tcp_rpc.client import Client
+
 
 logger = logging.getLogger(__name__)
+
+class TcpSerial:
+    def __init__(self, host=("192.168.0.91", 1111), speed=115200, timeout=2, writeTimeout=2):
+        self.speed = speed
+        self.timeout=timeout
+        self.writeTimeout=writeTimeout
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.s.connect(host)
+
+        
+    def read(self, size=1):
+        data = ""
+        while len(data) < size:
+            data += self.s.recv(size - len(data))
+        return data
+
+    def write(self, data):
+        self.s.send(data)
+    
+    def close(self):
+        self.s.close()
+        
 
 class Protocol(QtCore.QObject):
     add_line = pyqtSignal(str)
@@ -70,7 +96,8 @@ class Protocol(QtCore.QObject):
         self.serial = None
 
         try:
-            self.serial = serial.Serial(port, speed, timeout=2, writeTimeout=2)
+            #self.serial = serial.Serial(port, speed, timeout=2, writeTimeout=2)
+            self.serial = TcpSerial()
 
             #запуск чтения.
             self.read_thread = threading.Thread(target=self.read_proc)

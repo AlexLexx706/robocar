@@ -17,7 +17,7 @@ static uint8_t fifoBuffer[64]; // FIFO storage buffer
 
 // orientation/motion vars
 static Quaternion q;           // [w, x, y, z]         quaternion container
-static volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin has gone high
+static volatile bool mpuInterrupt = true;     // indicates whether MPU interrupt pin has gone high
 static Car car;
 static uint8_t buffer[33];
 static uint8_t buffer_size = 0;
@@ -42,9 +42,11 @@ void update_dmp6()
 {
     // if programming failed, don't try to do anything
     if (!dmpReady) return;
-
+    
     // wait for MPU interrupt or extra packet(s) available
-    while (!mpuInterrupt && fifoCount < packetSize){}
+    //while (!mpuInterrupt && fifoCount < packetSize){}
+    //Serial.print("I: ");
+    //Serial.println(mpuInterrupt);
 
     // reset interrupt flag and get INT_STATUS byte
     mpuInterrupt = false;
@@ -122,7 +124,7 @@ void setup()
 
 void loop() 
 {
-    //update_dmp6();
+    update_dmp6();
     car.update();
 
     //чтение данных из ком порта

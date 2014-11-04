@@ -180,14 +180,16 @@ void Car::update()
             cur_state->start(&angle);
         }**/
     //потеря связи с оператором
-    }else if (control_period.isReady()){
+    }
+    /*
+    else if (control_period.isReady()){
         wheel_left.set_power(0.f);
         wheel_right.set_power(0.f);
 
         if (debug){
             Serial.println("control_period estimate");
         }
-    }
+    }*/
 }
 
 void Car::process_command(uint8_t * data, uint8_t data_size)

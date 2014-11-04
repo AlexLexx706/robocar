@@ -131,8 +131,9 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     error(0.f),
     power(0.f),
     myPID(&error, &power, 2, 0, 0.35),
-    power_offset(0.)
-    
+    power_offset(0.),
+    dt(10000),
+    time_before(micros())
 {
     myPID.SetOutputLimits(-1, 1);
 }
@@ -167,11 +168,12 @@ void TurnAngleState::start(void * param)
     //рассчитаем шаг угла и количество итераций.
     float error = get_error(start_angle, dest_angle);
     float time = abs(error) / s_params->angle_speed;
-    common_count = (unsigned long)(time / 0.01);
+    common_count = (unsigned long)(time / (dt / 1000000.) );
     cur_count = 0;
     angle_step = error / common_count;
     stable_window = 100;
     error_window = PI / 180.f * 10.f;
+    time_before = micros();
     
     //распечатаем значения.
     if (car.debug){
@@ -215,6 +217,18 @@ State::ProcessState TurnAngleState::process()
     if (!is_active)
         return Failed;
     
+    unsigned long cur_time = micros();
+    unsigned long cur_dt = cur_time - time_before;
+    
+    //ещё рано
+    if (cur_dt < dt)
+        return InProgress;
+    
+    //откатим время
+    time_before = cur_time - cur_dt % dt;
+    
+    
+    if (cur_time - time_before )
     //рассчёт угла и направления поворота.
     cur_count++;
     float angle;
@@ -229,6 +243,7 @@ State::ProcessState TurnAngleState::process()
     error = get_error(car.giro_angles[0], angle);
    
     //проверка завершения
+    /*
     if (cur_count == common_count + stable_window){
         car.wheel_left.set_power(0);
         car.wheel_right.set_power(0);
@@ -250,6 +265,7 @@ State::ProcessState TurnAngleState::process()
         }
         return Failed;
     }
+    */
 
     myPID.Compute();
 

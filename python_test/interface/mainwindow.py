@@ -50,8 +50,8 @@ class MainWindow(QtGui.QMainWindow):
                             self.KEY_S: False}
         
         #обновление камеры 
-        #self.new_frame.connect(self.on_new_frame)
-        #threading.Thread(target=self.read_frame).start()
+        self.new_frame.connect(self.on_new_frame)
+        threading.Thread(target=self.read_frame).start()
         
         #подключим управление камерой через мышку
         self.label_video.start_move_camera.connect(self.on_start_move_camera)
@@ -124,7 +124,7 @@ class MainWindow(QtGui.QMainWindow):
         
     
     def on_update_info(self, data):
-        #self.update(data[3:6])
+        self.update(data[3:6])
         self.label_giro_x.setText("{:10.4f}".format(data[0]))
         self.label_giro_y.setText("{:10.4f}".format(data[1]))
         self.label_giro_z.setText("{:10.4f}".format(data[2]))
@@ -165,15 +165,17 @@ class MainWindow(QtGui.QMainWindow):
         self.set_servo_1_angle(self.camera_start_pos[0] - int(pos.x() * k))
         self.set_servo_2_angle(self.camera_start_pos[1] - int(pos.y() * k))
 
-
-        
     def read_frame(self):
         reader = FFmpegReader()
-        reader.process_direct_show_video()
+        #reader.process_direct_show_video()
+        reader.process_net_stream(5001)
         
         while 1:
-            image = QtGui.QImage(reader.read_string(), reader.size[0], reader.size[1], reader.size[0] * 3, QtGui.QImage.Format_RGB888)
-            self.new_frame.emit(image)
+            data = reader.read_string()
+            
+            if len(data) == reader.size[0] * reader.size[1] * 3:
+                image = QtGui.QImage(data, reader.size[0], reader.size[1], reader.size[0] * 3, QtGui.QImage.Format_RGB888)
+                self.new_frame.emit(image)
     
     def on_new_frame(self, image):
         self.label_video.setPixmap(QtGui.QPixmap.fromImage(image))
@@ -184,8 +186,8 @@ class MainWindow(QtGui.QMainWindow):
             #print self.kay_states
             self.l = 0.0
             self.r = 0.0
-            max_speed = 0.5
-            rotate_koef = 0.5
+            max_speed = 0.6
+            rotate_koef = 0.6
             
             #вперёд
             if self.kay_states[self.KEY_W]:

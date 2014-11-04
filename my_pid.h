@@ -20,6 +20,7 @@ private:
     bool first;
     float out_min, out_max;
     float dt;
+    unsigned long time_before;
 };
 #endif
 

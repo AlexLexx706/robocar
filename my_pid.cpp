@@ -12,7 +12,8 @@ ci(0),
 out_min(-1),
 out_max(1),
 first(true),
-dt(0.01)
+dt(0.01),
+time_before(micros())
 {
 }
 
@@ -21,21 +22,31 @@ void PID::Compute() {
         prew_error = *error;
         first = false;
         ci = 0;
+        time_before = micros();
     }
-    float de = *error - prew_error;
-    float cp = kp * (*error);
-    float cd = 0;
     
-    ci += (*error) * dt;
-    cd = de / dt;
-    prew_error = *error;
+    unsigned long cur_time = micros();
+    float cur_dt = (cur_time - time_before) / 1000000.;
 
-    (*output) = cp + (ki * ci) + (kd * cd);
-
-    if ((*output) < out_min)
-        (*output) = out_min;
-    else if ((*output) > out_max)
-        (*output) = out_max;
+    if (cur_dt >= dt )
+    {
+        cur_dt = dt;
+        time_before = cur_time;
+        float de = *error - prew_error;
+        float cp = kp * (*error);
+        float cd = 0;
+        
+        ci += (*error) * cur_dt;
+        cd = de / cur_dt;
+        prew_error = *error;
+    
+        (*output) = cp + (ki * ci) + (kd * cd);
+    
+        if ((*output) < out_min)
+            (*output) = out_min;
+        else if ((*output) > out_max)
+            (*output) = out_max;
+    }
 }
 
 void PID::SetOutputLimits(float min, float max){

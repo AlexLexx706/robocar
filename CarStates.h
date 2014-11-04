@@ -106,6 +106,8 @@ private:
     unsigned long common_count;
     unsigned long stable_window;
     float error_window;
+    unsigned long dt;
+    unsigned long time_before;
 };
 
 
