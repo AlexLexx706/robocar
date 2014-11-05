@@ -83,6 +83,7 @@ class MainWindow(QtGui.QMainWindow):
         self.wheel_timer.setSingleShot(False)
         self.l = 0.0
         self.r = 0.0
+        self.use_giro_control = True
 
     @pyqtSlot(bool)
     def on_action_clear_map_triggered(self, v):
@@ -183,50 +184,77 @@ class MainWindow(QtGui.QMainWindow):
     
     def update_car_controll(self):
         if self.is_enable_key_controll():
-            #print self.kay_states
-            self.l = 0.0
-            self.r = 0.0
-            max_speed = 0.6
-            rotate_koef = 0.6
-            
-            #вперёд
-            if self.kay_states[self.KEY_W]:
-                self.l = max_speed
-                self.r = max_speed
-            #назад
-            elif self.kay_states[self.KEY_S]:
-                self.l = -max_speed
-                self.r = -max_speed
+            #используем гиро контроль
+            if not self.use_giro_control:
+                self.on_update_wheels_2()
+                self.wheel_timer.stop()
 
-            #лево
-            if self.kay_states[self.KEY_A]:
+                if self.kay_states[self.KEY_A] or self.kay_states[self.KEY_D]:
+                    self.wheel_timer.start()
+            else:
+                #print self.kay_states
+                self.l = 0.0
+                self.r = 0.0
+                max_speed = 0.6
+                rotate_koef = 0.6
+                
+                #вперёд
                 if self.kay_states[self.KEY_W]:
-                    self.l = 0
-                elif  self.kay_states[self.KEY_S]:
-                    self.l = 0
-                else:
-                    self.r = max_speed * rotate_koef
-                    self.l = -max_speed * rotate_koef
-            #право
-            if self.kay_states[self.KEY_D]:
-                if self.kay_states[self.KEY_W]:
-                    self.r = 0
+                    self.l = max_speed
+                    self.r = max_speed
+                #назад
                 elif self.kay_states[self.KEY_S]:
-                    self.r = 0
-                else:
-                    self.r = -max_speed * rotate_koef
-                    self.l = max_speed * rotate_koef
+                    self.l = -max_speed
+                    self.r = -max_speed
 
-            self.on_update_wheels()
-            self.wheel_timer.stop()
+                #лево
+                if self.kay_states[self.KEY_A]:
+                    if self.kay_states[self.KEY_W]:
+                        self.l = 0
+                    elif  self.kay_states[self.KEY_S]:
+                        self.l = 0
+                    else:
+                        self.r = max_speed * rotate_koef
+                        self.l = -max_speed * rotate_koef
+                #право
+                if self.kay_states[self.KEY_D]:
+                    if self.kay_states[self.KEY_W]:
+                        self.r = 0
+                    elif self.kay_states[self.KEY_S]:
+                        self.r = 0
+                    else:
+                        self.r = -max_speed * rotate_koef
+                        self.l = max_speed * rotate_koef
 
-            if self.r != 0 or self.l != 0:
-                self.wheel_timer.start()
-    
+                self.on_update_wheels()
+                self.wheel_timer.stop()
+
+                if self.r != 0 or self.l != 0:
+                    self.wheel_timer.start()
+
     def on_update_wheels(self):
-        self.protocol.set_left_wheel_power(self.l)
-        self.protocol.set_right_wheel_power(self.r)
+        if not self.use_giro_control:
+            self.protocol.set_left_wheel_power(self.l)
+            self.protocol.set_right_wheel_power(self.r)
+        #используем гиро контроль
+        else:
+            angle = 0.2
+            power = 0.6
+            
+            if self.kay_states[self.KEY_A]:
+                self.protocol.set_angle(angle)
+            elif self.kay_states[self.KEY_D]:
+                self.protocol.set_angle(-angle)
+                
+            if self.kay_states[self.KEY_W]:
+                self.protocol.set_offset(power)
+            elif self.kay_states[self.KEY_S]:
+                self.protocol.set_offset(-power)
+            else:
+                self.protocol.set_offset(0)        
 
+      
+        
     def is_enable_key_controll(self):
         return self.checkBox_enable_key_controll.isChecked()
     

@@ -11,7 +11,7 @@ Car::Car():
     wheel_right(RIGTH_WHEEL_PWM_PIN, RIGTH_WHEEL_DIRECTION_PIN),
     last_cmd_time(0),
     enable_walk(false),
-    debug(false),
+    debug(true),
     info_period(0xffffffff),
     update_count(0),
     control_period(1000000),
@@ -94,15 +94,15 @@ void Car::update()
         EmitState();
     }
     
-    if (debug){
-        update_count++;
-        
-        if (update_period.isReady()){
-            Serial.print("update_count: ");
-            Serial.println(update_count);
-            update_count = 0;
-        }
-    }
+//    if (debug){
+//        update_count++;
+//        
+//        if (update_period.isReady()){
+//            Serial.print("update_count: ");
+//            Serial.println(update_count);
+//            update_count = 0;
+//        }
+//    }
     
 
     //алгоритм обхода препятствий.
@@ -181,15 +181,14 @@ void Car::update()
         }**/
     //потеря связи с оператором
     }
-    /*
     else if (control_period.isReady()){
         wheel_left.set_power(0.f);
         wheel_right.set_power(0.f);
 
-        if (debug){
-            Serial.println("control_period estimate");
-        }
-    }*/
+//        if (debug){
+//            Serial.println("control_period estimate");
+//        }
+    }
 }
 
 void Car::process_command(uint8_t * data, uint8_t data_size)
@@ -290,17 +289,28 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
     //установка ориентации
     else if ( data[0] == SetAngle )
     {
-        TurnAngleState::StartParams s_p;
-        s_p.angle = *(float*)(&data[1]);
-        s_p.use_abs_angle = true;
-        s_p.angle_speed = PI / 180.f * 90.f;
-
+        
+        TurnAngleState::StartParams * s_p((TurnAngleState::StartParams *)&data[1]);
         cur_state = turn_angle_state;
-        cur_state->start(&s_p);
+        cur_state->start(s_p);
         enable_walk = true;
     }
     //установка смещения
-    else if ( data[0] == SetPowerOffset ){
+    else if ( data[0] == SetPowerOffset )
+    {
+        //установка в состояние перемещение.
+        if (cur_state != turn_angle_state)
+        {
+            TurnAngleState::StartParams s_p;
+
+            s_p.angle = 0.;
+            s_p.use_abs_angle = false;
+            s_p.angle_speed = PI / 180.f * 90.f;
+            turn_angle_state->start(&s_p);
+        }
+
+        cur_state = turn_angle_state;
+        enable_walk = true;
         ((TurnAngleState *)turn_angle_state)->set_offset(*((float *)&data[1]));
     }
     //разрешить режим отладки

@@ -133,7 +133,9 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     myPID(&error, &power, 2, 0, 0.35),
     power_offset(0.),
     dt(10000),
-    time_before(micros())
+    time_before(micros()),
+    stable_window(100),
+    error_window(PI / 180.f * 10.f)
 {
     myPID.SetOutputLimits(-1, 1);
 }
@@ -145,15 +147,25 @@ void TurnAngleState::set_params(float p, float i, float d)
 
 void TurnAngleState::set_offset(float offset)
 {
+    if (car.debug){
+        Serial.print("set_offset: ");
+        Serial.println(offset);
+    }
     power_offset = offset;
 }
 
 void TurnAngleState::start(void * param)
 {
     StartParams * s_params((StartParams *)param);
-
-    //использовать абсолютный угол
-    myPID.Reset();
+    //распечатаем значения.
+    if (car.debug){
+        Serial.print("use_abs_angle: ");
+        Serial.print(s_params->use_abs_angle);
+        Serial.print("\nangle: ");
+        Serial.print(s_params->angle);
+        Serial.print("\nspeed: ");
+        Serial.println(s_params->angle_speed);
+    }
 
     start_angle = car.giro_angles[0];
     float dest_angle;
@@ -168,30 +180,17 @@ void TurnAngleState::start(void * param)
     //рассчитаем шаг угла и количество итераций.
     float error = get_error(start_angle, dest_angle);
     float time = abs(error) / s_params->angle_speed;
-    common_count = (unsigned long)(time / (dt / 1000000.) );
-    cur_count = 0;
-    angle_step = error / common_count;
-    stable_window = 100;
-    error_window = PI / 180.f * 10.f;
-    time_before = micros();
     
-    //распечатаем значения.
-    if (car.debug){
-        Serial.print("use_abs_angle: ");
-        Serial.print(s_params->use_abs_angle);
-        Serial.print("\nstart_angle: ");
-        Serial.print(start_angle);
-        Serial.print("\ndest_angle: ");
-        Serial.print(dest_angle);
-        Serial.print("\nerror: ");
-        Serial.print(error);
-        Serial.print("\nspeed: ");
-        Serial.print(s_params->angle_speed);
-        Serial.print("\ncommon_count: ");
-        Serial.print(common_count);
-        Serial.print("\n");
+    if (error != 0.0 && time * 1000000 >= dt) {
+        common_count = (unsigned long)(time / (dt / 1000000.) );
+        angle_step = error / common_count;
+    }else{
+        common_count = 0;
+        angle_step = 0.0;
     }
 
+    cur_count = 0; 
+    time_before = micros();
     car.wheel_left.set_power(0);
     car.wheel_right.set_power(0);
     State::start(param);
@@ -216,7 +215,7 @@ State::ProcessState TurnAngleState::process()
 {
     if (!is_active)
         return Failed;
-    
+
     unsigned long cur_time = micros();
     unsigned long cur_dt = cur_time - time_before;
     
@@ -241,7 +240,7 @@ State::ProcessState TurnAngleState::process()
     }
     
     error = get_error(car.giro_angles[0], angle);
-   
+
     //проверка завершения
     /*
     if (cur_count == common_count + stable_window){
@@ -266,9 +265,8 @@ State::ProcessState TurnAngleState::process()
         return Failed;
     }
     */
-
     myPID.Compute();
-
+   
     if (power >= 0 )
     {
         car.wheel_left.set_power(-power + power_offset);
