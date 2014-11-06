@@ -238,7 +238,7 @@ class MainWindow(QtGui.QMainWindow):
             self.protocol.set_right_wheel_power(self.r)
         #используем гиро контроль
         else:
-            angle = 0.2
+            angle = math.pi/180. * 10.0
             power = 0.6
             
             if self.kay_states[self.KEY_A]:
