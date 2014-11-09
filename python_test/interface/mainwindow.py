@@ -9,6 +9,7 @@ import numpy as np
 import math
 from robot_scene import RobotScene
 from robot_scene import RobotScene
+from LidarFrame import LidarFrame
 
 class MainWindow(QtGui.QMainWindow):
     new_frame = pyqtSignal("QImage")
@@ -84,6 +85,10 @@ class MainWindow(QtGui.QMainWindow):
         self.l = 0.0
         self.r = 0.0
         self.use_giro_control = True
+        
+        #добавим лидар
+        self.lidar_frame = LidarFrame(self.settings, self)
+        self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
 
     @pyqtSlot(bool)
     def on_action_clear_map_triggered(self, v):
