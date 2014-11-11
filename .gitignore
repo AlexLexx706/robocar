@@ -1,3 +1,4 @@
 /android_controll/bin
 /android_controll/gen
 *.pyc
+/python_test/interface/.idea
