@@ -2,17 +2,16 @@
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import pyqtgraph as pg
-import numpy as np
 import logging
 import threading
-logger = logging.getLogger(__name__)
-from aproximation_tools import sector_to_data
 import math
-from tcp_rpc.client import Client
-import json
 import time
+import pickle
+import os
+from tcp_rpc.client import Client
 from Vec2d import Vec2d
 
+logger = logging.getLogger(__name__)
 
 class LidarFrame(QtGui.QFrame):
     new_data = pyqtSignal(object)
@@ -28,6 +27,9 @@ class LidarFrame(QtGui.QFrame):
         self.new_data.connect(self.on_new_data)
         self.lineEdit_host.setText(self.settings.value("lidar_host", "192.168.0.91").toString())
         self.spinBox_port.setValue(self.settings.value("lidar_port", 8080).toInt()[0])
+        
+        self.groupBox_connection.setChecked(self.settings.value("lidar_use_connection", True).toBool())
+        self.checkBox_record.setChecked(self.settings.value("lidar_record", True).toBool())
 
         ## create four areas to add plots
         self.w1 = self.view.addPlot()
@@ -53,21 +55,37 @@ class LidarFrame(QtGui.QFrame):
         self.settings.setValue("lidar_port", self.spinBox_port.value())
     
     @pyqtSlot(bool)
-    def on_pushButton_connect_clicked(self, v):
+    def on_pushButton_control_clicked(self, v):
         if self.stop_flag:
-            self.pushButton_connect.setText(u"Отключить")
+            self.pushButton_control.setText(u"Стоп")
             self.start()
         else:
-            self.pushButton_connect.setText(u"Подключить")
+            self.pushButton_control.setText(u"Старт")
             self.stop()
+
+    @pyqtSlot(bool)
+    def on_groupBox_connection_clicked(self, v):
+        self.settings.setValue("lidar_use_connection", v)
+        
+    @pyqtSlot(bool)
+    def on_checkBox_record_toggled(self, v):
+        self.settings.setValue("lidar_record", v)
+    
+     
 
     def start(self):
         url = (unicode(self.lineEdit_host.text()), self.spinBox_port.value())
 
         if self.stop_flag:
             self.stop_flag = False
-            self.read_thread = threading.Thread(target=self.read_proc, args=(url, ))
-            #self.read_thread = threading.Thread(target=self.read_file_proc, args=("data.dat", ))
+            out_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
+
+            #запуск чтения с датчика
+            if self.groupBox_connection.isChecked():
+                self.read_thread = threading.Thread(target=self.read_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
+            #запуск из файла
+            else:
+                self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
             self.read_thread.start()
     
     def stop(self):
@@ -75,25 +93,41 @@ class LidarFrame(QtGui.QFrame):
             self.stop_flag = True
             self.read_thread.join()
 
-    def read_proc(self, url):
+    def read_proc(self, url, out_file):
         client = Client(url)
-        data_list = []
-       
+        
+        #Создадим поток для записи данных
+        if out_file is not None:
+            out_file = pickle.Pickler(open(out_file, "wb"))
+
         while not self.stop_flag:
             data = client.ik_get_sector(1)
 
             if data is not None:
-                self.new_data.emit(self.prepare_data(data[0]))
+                data = data[0]
+                self.new_data.emit(self.prepare_data(data))
+                time.sleep(1)
+                    
+                #пишем поток.
+                if out_file is not None:
+                    out_file.dump(data)
+
 
     def read_file_proc(self, file_path):
-        data = json.loads(open(file_path, "rb").read())
-        i = 0
-        
+        if not os.path.exists(file_path):
+            return
+
+        stream = pickle.Unpickler(open(file_path, "rb"))
+       
         while not self.stop_flag:
-            if 1:#i == 0:
-                self.new_data.emit(data[i % len(data)])
-            time.sleep(1.0)
-            i += 1
+            try:
+                data = stream.load()
+                self.new_data.emit(self.prepare_data(data))
+                time.sleep(1.0)
+            #конец файла
+            except EOFError:
+                stream = pickle.Unpickler(open(file_path, "rb"))
+                time.sleep(1)
 
     def prepare_data(self, data):
         st = time.time()
