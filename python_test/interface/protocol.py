@@ -14,17 +14,15 @@ from math import pi as PI
 logger = logging.getLogger(__name__)
 
 class TcpSerial:
-    def __init__(self, host=("192.168.10.154", 1111), speed=115200, timeout=2, writeTimeout=2):
-        self.speed = speed
-        self.timeout=timeout
-        self.writeTimeout=writeTimeout
+    def __init__(self, host="192.168.0.91", port=1111):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect(host)
-
+        self.s.connect((host, port))
+        self.stop_flag = False
+        
         
     def read(self, size=1):
         data = ""
-        while len(data) < size:
+        while not self.stop_flag and len(data) < size:
             data += self.s.recv(size - len(data))
         return data
 
@@ -32,10 +30,13 @@ class TcpSerial:
         self.s.send(data)
     
     def close(self):
+        self.stop_flag = True
+        self.s.shutdown(socket.SHUT_RDWR)
         self.s.close()
         
 
 class Protocol(QtCore.QObject):
+    '''Реализация протокола управления машинкой'''
     add_line = pyqtSignal(str)
     update_info = pyqtSignal(object)
     
@@ -65,6 +66,9 @@ class Protocol(QtCore.QObject):
             logger.debug("<-")
         
     def read_proc(self):
+        '''
+        Читает данные 
+        '''
         try:
             logger.debug("read_proc ->")
             
@@ -95,7 +99,12 @@ class Protocol(QtCore.QObject):
         finally:
             logger.debug("read_proc <-")
 
-    def connect(self, port, speed):
+    def connect(self, type, settings):
+        '''type - тип транспорта 0 - com port, 1 - tcp socket
+            settings - настройки:
+                com_port:{"port": "com1", "speed":115200, "timeout":2, "writeTimeout":2}
+                tcp_socket:{"host":"192.168.0.91", "port":1111}
+        '''
         try:
             logger.debug("->")
             if self.serial is not None:
@@ -103,8 +112,10 @@ class Protocol(QtCore.QObject):
             self.serial = None
 
             try:
-                #self.serial = serial.Serial(port, speed, timeout=2, writeTimeout=2)
-                self.serial = TcpSerial()
+                if type == 0:
+                    self.serial = serial.Serial(**settings)
+                else:
+                    self.serial = TcpSerial(**settings)
 
                 #запуск чтения.
                 self.read_thread = threading.Thread(target=self.read_proc)

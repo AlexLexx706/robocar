@@ -39,7 +39,12 @@ class MainWindow(QtGui.QMainWindow):
 
         self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
-        self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", False).toBool() else QtCore.Qt.Unchecked)
+        self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", True).toBool()
+            else QtCore.Qt.Unchecked)
+
+        self.spinBox_socket_port.setValue(self.settings.value("socket_port", 1111).toInt()[0])
+        self.lineEdit_socket_host.setText(self.settings.value("socket_host", "192.168.0.91").toString())
+        self.set_connection_type(self.settings.value("connection_type", 0).toInt()[0])
 
         #self.add_char.connect(self.on_add_char)
         self.protocol.add_line.connect(self.on_add_line)
@@ -90,6 +95,18 @@ class MainWindow(QtGui.QMainWindow):
         self.lidar_frame = LidarFrame(self.settings, self)
         self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
 
+
+    def get_connection_type(self):
+        return 0 if self.radioButton_com.isChecked() else 1
+    
+    def set_connection_type(self, t):
+        if t == 0:
+            self.radioButton_com.setChecked(True)
+        else:
+            self.radioButton_socket.setChecked(True)
+
+        self.settings.setValue("connection_type", t)
+    
     @pyqtSlot(bool)
     def on_action_clear_map_triggered(self, v):
         self.scene.clear_map()
@@ -359,10 +376,23 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot()
     def on_pushButton_connect_clicked(self):
         if not self.protocol.is_connected():
-            speed = int(self.lineEdit_speed.text())
 
-            if self.protocol.connect("COM{}".format(self.spinBox_port_name.value()), speed):
-                self.pushButton_connect.setText(u"Отключить")
+            #COM port
+            if self.get_connection_type() == 0:
+                settings = {"port": "COM{}".format(self.spinBox_port_name.value()),
+                            "baudrate": int(self.lineEdit_speed.text()),
+                            "timeout":2,
+                            "writeTimeout":2}
+                
+                if self.protocol.connect(0, settings):
+                    self.pushButton_connect.setText(u"Отключить")
+            #socket
+            else:
+                settings = {"host": unicode(self.lineEdit_socket_host.text()),
+                            "port": self.spinBox_socket_port.value()}
+                
+                if self.protocol.connect(1, settings):
+                    self.pushButton_connect.setText(u"Отключить")
         else:
             self.pushButton_connect.setText(u"Подключить")
             self.protocol.close()
@@ -537,7 +567,30 @@ class MainWindow(QtGui.QMainWindow):
         elif self.radioButton_right_wheel_speed.isChecked():
             return 1
         return 2
-    
+
+
     @pyqtSlot("int")
     def on_horizontalSlider_speed_valueChanged(self, value):
         self.protocol.set_wheel_speed(self.get_wheel_id(), value)
+
+    @pyqtSlot(bool)
+    def on_radioButton_com_toggled(self, v):
+        if v:
+            self.set_connection_type(0)
+        else:
+            self.set_connection_type(1)
+
+    @pyqtSlot(bool)
+    def on_radioButton_socket_toggled(self, v):
+        if v:
+            self.set_connection_type(1)
+        else:
+            self.set_connection_type(0)
+        
+    @pyqtSlot(int)
+    def on_spinBox_socket_port_valueChanged(self, value):
+        self.settings.setValue("socket_port", value)
+
+    @pyqtSlot("QString")
+    def on_lineEdit_socket_host_textChanged(self, text):
+        self.settings.setValue("socket_host", text)
