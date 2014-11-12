@@ -186,7 +186,6 @@ class MainWindow(QtGui.QMainWindow):
     def on_new_frame(self, image):
         self.label_video.setPixmap(QtGui.QPixmap.fromImage(image))
     
-    
     def update_car_controll(self):
         if self.is_enable_key_controll():
             #используем гиро контроль
