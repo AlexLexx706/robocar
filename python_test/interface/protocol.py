@@ -62,6 +62,8 @@ class Protocol(QtCore.QObject):
             self.serial = None
             self.stop_read = True
             self.last_info = None
+            self.lock = threading.Lock()
+            self.set_angle_res = []
         finally:
             logger.debug("<-")
         
@@ -87,6 +89,19 @@ class Protocol(QtCore.QObject):
                             if acc == self.ACC_INFO:
                                 self.last_info = struct.unpack('<fffhhhfllllBB', data)
                                 self.update_info.emit(self.last_info)
+                            #завершение команды поворота
+                            elif acc == self.CMD_ANGLE:
+                                angle = -struct.unpack('<f', data)[0]
+                                print "CMD_ANGLE coplete angle:", angle
+
+                                with self.lock:
+                                    self.set_angle_res.append(angle)
+                                    
+                                    #против переполнения
+                                    if len(self.set_angle_res) > 2:
+                                        logger.warning("len(self.set_angle_res) > 2!!!")
+                                        self.set_angle_res.pop(0)
+
                         except Exception as e:
                             logging.error(str(e))
                     #отладка.
@@ -163,7 +178,7 @@ class Protocol(QtCore.QObject):
             data = struct.pack("<BBfff", self.CMD_PID_SETTINGS, type, p, i, d)
             self.write(struct.pack("<B", len(data)) + data)
 
-    def set_angle(self, angle, use_abs_angle=False, angle_speed=PI/180.*90.):
+    def set_angle(self, angle, use_abs_angle=False, angle_speed=PI / 180. * 90.):
         '''
         Установить направление двидения или абсолютный угол.
         angle - угол в рад., если use_abs_angle=false, то угол выставляется относительно текущего значения направления, 
@@ -180,6 +195,14 @@ class Protocol(QtCore.QObject):
                 self.write(struct.pack("<B", len(data)) + data)
         finally:
             logger.debug("<-")
+    
+    def get_set_angle_res(self):
+        '''Возвращает угол на который машина повернулась для последней комманды set_angle'''
+        with self.lock:
+            if len(self.set_angle_res):
+                print "!!!!!!!!!!!!"
+                return self.set_angle_res.pop(0)
+            return None
 
     def set_offset(self, offset):
         '''

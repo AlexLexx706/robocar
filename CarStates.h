@@ -86,6 +86,13 @@ public:
         float angle_speed;
     };
 
+    //Формат ответа
+    struct CmdResponce{
+        uint8_t cmd;
+        float complete_angle;
+    };
+
+
     TurnAngleState(Car & car, float max_window,  float min_window, float max_power, float min_power);
     virtual void start(void * param);
     virtual ProcessState process();
@@ -108,6 +115,9 @@ private:
     float error_window;
     unsigned long dt;
     unsigned long time_before;
+    boolean first;
+    
+    void send_resp(float angle);
 };
 
 

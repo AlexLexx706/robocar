@@ -87,7 +87,7 @@ class MainWindow(QtGui.QMainWindow):
         self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
         self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
         self.lidar_frame.label_video.addAction(self.action_reset_camera)
-
+        self.set_angle_first = True
 
 
     def get_connection_type(self):
@@ -238,14 +238,24 @@ class MainWindow(QtGui.QMainWindow):
             self.protocol.set_right_wheel_power(self.r)
         #используем гиро контроль
         else:
-            angle = math.pi/180. * 10.0
+            angle = math.pi/180. * 30
+            angle_speed=math.pi/ 180. * 60.
             power = 0.6
             
             if self.kay_states[self.KEY_A]:
-                self.protocol.set_angle(angle)
+                if self.protocol.is_connected():
+                    if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
+                        print "111111111"
+                        self.set_angle_first = False
+                        self.protocol.set_angle(angle, angle_speed=angle_speed)
+                        
             elif self.kay_states[self.KEY_D]:
-                self.protocol.set_angle(-angle)
-                
+                if self.protocol.is_connected():
+                    if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
+                        print "22222222222"
+                        self.set_angle_first = False
+                        self.protocol.set_angle(-angle, angle_speed=angle_speed)
+
             if self.kay_states[self.KEY_W]:
                 self.protocol.set_offset(power)
             elif self.kay_states[self.KEY_S]:
@@ -538,7 +548,11 @@ class MainWindow(QtGui.QMainWindow):
         self.dial_angle.blockSignals(False)
         
         self.settings.setValue("angle", angle)
-        self.protocol.set_angle(angle)
+
+        if self.protocol.is_connected():
+            if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
+                self.set_angle_first = False
+                self.protocol.set_angle(angle)
     
     def get_wheel_id(self):
         if self.radioButton_left_wheel_speed.isChecked():

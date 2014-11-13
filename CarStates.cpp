@@ -134,8 +134,11 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     power_offset(0.),
     dt(10000),
     time_before(micros()),
+    cur_count(0),
+    common_count(0),
     stable_window(100),
-    error_window(PI / 180.f * 10.f)
+    error_window(PI / 180.f * 10.f),
+    first(true)
 {
     myPID.SetOutputLimits(-1, 1);
 }
@@ -157,6 +160,16 @@ void TurnAngleState::set_offset(float offset)
 void TurnAngleState::start(void * param)
 {
     StartParams * s_params((StartParams *)param);
+
+    //возвратим результат установки угла если поворот не был завершон
+    if (s_params->angle != 0.0){
+        if (first == false && cur_count < common_count + stable_window) {
+            Serial.println("Reset complete");
+            send_resp(get_error(car.giro_angles[0], start_angle));
+        }
+        first = false;
+    }
+
     //распечатаем значения.
     if (car.debug){
         Serial.print("use_abs_angle: ");
@@ -210,6 +223,12 @@ float TurnAngleState::get_error(float start, float end)
     return angle;
 }
 
+void TurnAngleState::send_resp(float angle){
+    CmdResponce resp = {Car::SetAngle, angle};
+    Serial.write(0);
+    Serial.write(sizeof(CmdResponce));
+    Serial.write((const uint8_t *)&resp, sizeof(CmdResponce));
+}
 
 State::ProcessState TurnAngleState::process()
 {
@@ -242,29 +261,10 @@ State::ProcessState TurnAngleState::process()
     error = get_error(car.giro_angles[0], angle);
 
     //проверка завершения
-    /*
-    if (cur_count == common_count + stable_window){
-        car.wheel_left.set_power(0);
-        car.wheel_right.set_power(0);
-        is_active = false;
-
-        //всё ок уложились в окно
-        if (abs(error) <= error_window){
-            if (car.debug){
-                Serial.print("error: ");
-                Serial.print(error);
-                Serial.print("\n Turn OK\n");
-            }
-            return Ok;
-        }
-        if (car.debug){
-            Serial.print("error: ");
-            Serial.print(error);
-            Serial.print("\n Turn Failed\n");
-        }
-        return Failed;
+    if (common_count > 0 && cur_count == common_count + stable_window){
+        Serial.println("Good complete");
+        send_resp(get_error(car.giro_angles[0], start_angle));
     }
-    */
     myPID.Compute();
    
     if (power >= 0 )
