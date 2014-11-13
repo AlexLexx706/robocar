@@ -105,8 +105,11 @@ class LidarFrame(QtGui.QFrame):
 
             if data is not None:
                 data = data[0]
-                print self.lfm.sector_to_lines(data)
-                self.new_data.emit(self.lfm.sector_to_clusters(data))
+                clusters_list = self.lfm.sector_to_clusters(data)
+                lines = self.lfm.clusters_to_lines(clusters_list)
+                print self.lfm.get_distances(lines)
+
+                self.new_data.emit(clusters_list)
                     
                 #пишем поток.
                 if out_file is not None:
@@ -122,7 +125,12 @@ class LidarFrame(QtGui.QFrame):
         while not self.stop_flag:
             try:
                 data = stream.load()
-                self.new_data.emit(self.lfm.sector_to_clusters(data))
+
+                clusters_list = self.lfm.sector_to_clusters(data)
+                lines = self.lfm.clusters_to_lines(clusters_list)
+                print self.lfm.get_distances(lines)
+
+                self.new_data.emit(clusters_list)
                 time.sleep(1.0)
             #конец файла
             except EOFError:

@@ -14,7 +14,7 @@ from math import pi as PI
 logger = logging.getLogger(__name__)
 
 class TcpSerial:
-    def __init__(self, host=("192.168.0.91", 1111), speed=115200, timeout=2, writeTimeout=2):
+    def __init__(self, host=("192.168.10.154", 1111), speed=115200, timeout=2, writeTimeout=2):
         self.speed = speed
         self.timeout=timeout
         self.writeTimeout=writeTimeout

@@ -19,19 +19,65 @@ class LineFeaturesMaker:
             res.append(self.split_and_merge_cluster(cluster))
         return res
 
-    def sector_to_lines(self, data):
-        '''Преобразует сектор в линии'''
+    def clusters_to_lines(self, clusters_list):
+        '''Преобразует список кластеров в линии (start, stop, direction, normal)'''
         lines = []
-        for clusters in self.sector_to_clusters(data):
+
+        for clusters in clusters_list:
             for cluster in clusters:
-                lines.append((cluster[0], cluster[-1]))
+                p1 = Vec2d(cluster[0])
+                p2 = Vec2d(cluster[-1])
+                d = (p2 - p1).normalized()
+                n = d.perpendicular()
+                lines.append((p1, p2, d, n))
         return lines
 
-    def get_distance(self, data):
+    def get_distances(self, lines):
         '''Найдём расстояние до передней, левой, задней, правой стенок.'''
 
-        for line in self.sector_to_lines(data):
-            pass
+        #список направлений.
+        directions = [(Vec2d(1.0, 0.0), Vec2d(0.0, 1.0)),
+                      (Vec2d(0.0, 1.0), Vec2d(-1.0, 0.0)),
+                      (Vec2d(-1.0, 0.0), Vec2d(0.0, -1.0)),
+                      (Vec2d(0.0, -1.0), Vec2d(1.0, 0.0))]
+
+        directions_res = [None, None, None, None]
+
+        for i, d_desc in enumerate(directions):
+            d_dir, d_norm = d_desc
+
+            for l_p1, l_p2, l_d, l_n in lines:
+                #поиск проекций.
+
+                #проекция пересекает направление и нормали ок.
+                if d_dir.dot(l_p1) >= 0.0 and d_dir.dot(l_p2) <= 0 and d_norm.dot(l_n) < 0.0:
+                    k = self.line_intersection((l_p1, l_p2), (Vec2d(0,0), d_norm))
+
+                    len = d_norm.dot(k)
+                    directions_res[i] = len
+                    break
+        return directions_res
+
+    def line_intersection(self, l1, l2):
+        '''пересечение линий'''
+        p1 = l1[0]
+        p2 = l1[1]
+        p3 = l2[0]
+        p4 = l2[1]
+
+        d = (p1.x - p2.x) * (p4.y - p3.y) - (p1.y - p2.y) * (p4.x - p3.x)
+        da = (p1.x - p3.x) * (p4.y - p3.y) - (p1.y - p3.y) * (p4.x - p3.x)
+        db = (p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)
+
+        if d  == 0:
+            return None
+
+        ta = da / float(d)
+        tb = db / float(d)
+
+        dx = p1.x + ta * (p2.x - p1.x)
+        dy = p1.y + ta * (p2.y - p1.y)
+        return Vec2d(dx, dy)
 
 
     def sector_to_points(self, data, start_angle=0, max_len=1000):
