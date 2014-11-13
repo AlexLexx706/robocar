@@ -232,29 +232,31 @@ class MainWindow(QtGui.QMainWindow):
                 if self.r != 0 or self.l != 0:
                     self.wheel_timer.start()
 
+    def check_set_angle(self):
+        return True
+        if self.protocol.is_connected():
+            if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
+                self.set_angle_first = False
+                return True
+        return False
+        
     def on_update_wheels(self):
         if not self.use_giro_control:
             self.protocol.set_left_wheel_power(self.l)
             self.protocol.set_right_wheel_power(self.r)
         #используем гиро контроль
         else:
-            angle = math.pi/180. * 30
-            angle_speed=math.pi/ 180. * 60.
+            angle = math.pi/180. * 20
+            angle_speed=math.pi/ 180. * 80.
             power = 0.6
             
             if self.kay_states[self.KEY_A]:
-                if self.protocol.is_connected():
-                    if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
-                        print "111111111"
-                        self.set_angle_first = False
-                        self.protocol.set_angle(angle, angle_speed=angle_speed)
+                if self.check_set_angle():
+                    self.protocol.set_angle(angle, angle_speed=angle_speed)
                         
             elif self.kay_states[self.KEY_D]:
-                if self.protocol.is_connected():
-                    if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
-                        print "22222222222"
-                        self.set_angle_first = False
-                        self.protocol.set_angle(-angle, angle_speed=angle_speed)
+                if self.check_set_angle():
+                    self.protocol.set_angle(-angle, angle_speed=angle_speed)
 
             if self.kay_states[self.KEY_W]:
                 self.protocol.set_offset(power)
@@ -549,10 +551,8 @@ class MainWindow(QtGui.QMainWindow):
         
         self.settings.setValue("angle", angle)
 
-        if self.protocol.is_connected():
-            if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
-                self.set_angle_first = False
-                self.protocol.set_angle(angle)
+        if self.check_set_angle():
+            self.protocol.set_angle(angle)
     
     def get_wheel_id(self):
         if self.radioButton_left_wheel_speed.isChecked():

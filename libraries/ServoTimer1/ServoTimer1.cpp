@@ -39,7 +39,7 @@ void ServoTimer1::seizeTimer1()
     ICR1 = clockCyclesPerMicrosecond()*(20000L/8);  // 20000 uS is a bit fast for the refresh, 20ms, but 
                                                     // it keeps us from overflowing ICR1 at 20MHz clocks
                                                     // That "/8" at the end is the prescaler.
-#if defined(__AVR_ATmega168__)
+#if defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__)
     TIMSK1 &=  ~(_BV(OCIE1A) | _BV(OCIE1B) | _BV(TOIE1) );
 #else
     TIMSK &= ~(_BV(TICIE1) | _BV(OCIE1A) | _BV(OCIE1B) | _BV(TOIE1) );
