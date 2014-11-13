@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
-
+import res
 from PyQt4 import QtGui, uic, QtCore
 from mainwindow import MainWindow
 import logging

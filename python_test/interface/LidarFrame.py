@@ -11,11 +11,13 @@ import os
 from tcp_rpc.client import Client
 from Vec2d import Vec2d
 from LineFeaturesMaker import LineFeaturesMaker
+from cross_detector.ffmpeg_reader import FFmpegReader
 
 logger = logging.getLogger(__name__)
 
 class LidarFrame(QtGui.QFrame):
     new_data = pyqtSignal(object)
+    new_video_frame = pyqtSignal("QImage")
     
     def __init__(self, settings, parent=None):
         super(QtGui.QFrame, self).__init__(parent)
@@ -41,10 +43,56 @@ class LidarFrame(QtGui.QFrame):
         self.w1.addItem(self.s1)
         self.write_file = None
         self.lfm = LineFeaturesMaker()
+        
+        self.video_thread = None
+        self.new_video_frame.connect(self.on_new_video_frame)
+    
+    def start_video(self):
+        if self.video_thread is None:
+            self.reader = FFmpegReader()
+            self.video_thread = threading.Thread(target=self.read_frame)
+            self.video_thread.start()
+    
+    def stop_video(self):
+        if self.video_thread is not None:
+            self.reader.release()
+            self.video_thread.join()
+            self.video_thread = None
+            print "!!!!!!!!!!!!!"
+            self.label_video.setPixmap(QtGui.QPixmap(":/res/Video.png"))
+            
+    def read_frame(self):
+        '''Поток чтения данных с камеры'''
+        self.reader.process_net_stream(5001)
+        
+        while 1:
+            data = self.reader.read_string()
+            l = len(data)
 
+            if l == 0:
+                break
+
+            if l == self.reader.size[0] * self.reader.size[1] * 3:
+                image = QtGui.QImage(data, self.reader.size[0], self.reader.size[1], self.reader.size[0] * 3, QtGui.QImage.Format_RGB888)
+                self.new_video_frame.emit(image)
+
+    @pyqtSlot(bool)
+    def on_pushButton_start_video_clicked(self, v):
+        if self.video_thread is not None:
+            self.stop_video()
+            self.pushButton_start_video.setText(u"Запустить видео")
+        else:
+            self.start_video()
+            self.pushButton_start_video.setText(u"Остановить видео")
+
+        
+        
+    def on_new_video_frame(self, image):
+        self.label_video.setPixmap(QtGui.QPixmap.fromImage(image))
 
     def closeEvent(self, event):
         self.stop()
+        self.stop_video()
         QtGui.QFrame.closeEvent(self, event)
         
     

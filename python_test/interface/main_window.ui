@@ -7,11 +7,11 @@
     <x>0</x>
     <y>0</y>
     <width>835</width>
-    <height>765</height>
+    <height>749</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Управление Машинкой</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_9">
@@ -26,75 +26,29 @@
        </property>
        <widget class="QWidget" name="tab_3">
         <attribute name="title">
-         <string>Видео\отладка</string>
+         <string>Отладка</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout">
+         <property name="spacing">
+          <number>4</number>
+         </property>
+         <property name="margin">
+          <number>4</number>
+         </property>
          <item>
-          <widget class="QSplitter" name="splitter">
-           <property name="frameShape">
-            <enum>QFrame::StyledPanel</enum>
+          <widget class="QLineEdit" name="lineEdit_text"/>
+         </item>
+         <item>
+          <widget class="QPlainTextEdit" name="plainTextEdit_log">
+           <property name="contextMenuPolicy">
+            <enum>Qt::ActionsContextMenu</enum>
            </property>
-           <property name="orientation">
-            <enum>Qt::Vertical</enum>
-           </property>
-           <property name="opaqueResize">
+           <property name="readOnly">
             <bool>true</bool>
            </property>
-           <property name="childrenCollapsible">
+           <property name="centerOnScroll">
             <bool>true</bool>
            </property>
-           <widget class="QFrame" name="frame_keys">
-            <property name="focusPolicy">
-             <enum>Qt::StrongFocus</enum>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::StyledPanel</enum>
-            </property>
-            <property name="frameShadow">
-             <enum>QFrame::Raised</enum>
-            </property>
-            <layout class="QGridLayout" name="gridLayout_9">
-             <item row="2" column="0" colspan="3">
-              <widget class="QLineEdit" name="lineEdit_text"/>
-             </item>
-             <item row="3" column="0" rowspan="2" colspan="3">
-              <widget class="QPlainTextEdit" name="plainTextEdit_log">
-               <property name="contextMenuPolicy">
-                <enum>Qt::ActionsContextMenu</enum>
-               </property>
-               <property name="readOnly">
-                <bool>true</bool>
-               </property>
-               <property name="centerOnScroll">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </widget>
-           <widget class="LabelExt" name="label_video">
-            <property name="contextMenuPolicy">
-             <enum>Qt::ActionsContextMenu</enum>
-            </property>
-            <property name="frameShape">
-             <enum>QFrame::NoFrame</enum>
-            </property>
-            <property name="text">
-             <string/>
-            </property>
-            <property name="pixmap">
-             <pixmap resource="res.qrc">:/res/Video.png</pixmap>
-            </property>
-            <property name="scaledContents">
-             <bool>true</bool>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-            <property name="wordWrap">
-             <bool>false</bool>
-            </property>
-           </widget>
           </widget>
          </item>
         </layout>
@@ -1217,22 +1171,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar">
-   <property name="geometry">
-    <rect>
-     <x>0</x>
-     <y>0</y>
-     <width>835</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <widget class="QMenu" name="menuAfqk">
-    <property name="title">
-     <string>Файл</string>
-    </property>
-   </widget>
-   <addaction name="menuAfqk"/>
-  </widget>
   <action name="action_reset_camera">
    <property name="text">
     <string>Сбросить камеру</string>
@@ -1250,11 +1188,6 @@
   </action>
  </widget>
  <customwidgets>
-  <customwidget>
-   <class>LabelExt</class>
-   <extends>QLabel</extends>
-   <header>label_ext</header>
-  </customwidget>
   <customwidget>
    <class>SceneView</class>
    <extends>QGraphicsView</extends>

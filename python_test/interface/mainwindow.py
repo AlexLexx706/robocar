@@ -3,7 +3,6 @@ from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
 from protocol import Protocol
-from cross_detector.ffmpeg_reader import FFmpegReader
 import pyqtgraph as pg
 import numpy as np
 import math
@@ -12,8 +11,6 @@ from robot_scene import RobotScene
 from LidarFrame import LidarFrame
 
 class MainWindow(QtGui.QMainWindow):
-    new_frame = pyqtSignal("QImage")
-    
     KEY_A = 65
     KEY_W = 87
     KEY_D = 68
@@ -55,15 +52,8 @@ class MainWindow(QtGui.QMainWindow):
                             self.KEY_D: False,
                             self.KEY_S: False}
         
-        #обновление камеры 
-        self.new_frame.connect(self.on_new_frame)
-        threading.Thread(target=self.read_frame).start()
-        
         #подключим управление камерой через мышку
-        self.label_video.start_move_camera.connect(self.on_start_move_camera)
-        self.label_video.move_camera.connect(self.on_move_camera)
         self.camera_start_pos = None
-        self.label_video.addAction(self.action_reset_camera)
         self.plainTextEdit_log.addAction(self.action_clear)
         
         #Добавим графики
@@ -94,6 +84,10 @@ class MainWindow(QtGui.QMainWindow):
         #добавим лидар
         self.lidar_frame = LidarFrame(self.settings, self)
         self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
+        self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
+        self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
+        self.lidar_frame.label_video.addAction(self.action_reset_camera)
+
 
 
     def get_connection_type(self):
@@ -185,24 +179,9 @@ class MainWindow(QtGui.QMainWindow):
 
     def on_move_camera(self, pos):
         k = 0.5
-        self.set_servo_1_angle(self.camera_start_pos[0] - int(pos.x() * k))
-        self.set_servo_2_angle(self.camera_start_pos[1] - int(pos.y() * k))
-
-    def read_frame(self):
-        reader = FFmpegReader()
-        #reader.process_direct_show_video()
-        reader.process_net_stream(5001)
-        
-        while 1:
-            data = reader.read_string()
-            
-            if len(data) == reader.size[0] * reader.size[1] * 3:
-                image = QtGui.QImage(data, reader.size[0], reader.size[1], reader.size[0] * 3, QtGui.QImage.Format_RGB888)
-                self.new_frame.emit(image)
-    
-    def on_new_frame(self, image):
-        self.label_video.setPixmap(QtGui.QPixmap.fromImage(image))
-    
+        self.set_servo_2_angle(self.camera_start_pos[0] - int(pos.x() * k))
+        self.set_servo_1_angle(self.camera_start_pos[1] - int(pos.y() * k))
+   
     def update_car_controll(self):
         if self.is_enable_key_controll():
             #используем гиро контроль
@@ -381,8 +360,8 @@ class MainWindow(QtGui.QMainWindow):
             if self.get_connection_type() == 0:
                 settings = {"port": "COM{}".format(self.spinBox_port_name.value()),
                             "baudrate": int(self.lineEdit_speed.text()),
-                            "timeout":2,
-                            "writeTimeout":2}
+                            "timeout": 2,
+                            "writeTimeout": 2}
                 
                 if self.protocol.connect(0, settings):
                     self.pushButton_connect.setText(u"Отключить")

@@ -102,7 +102,7 @@ class Protocol(QtCore.QObject):
     def connect(self, type, settings):
         '''type - тип транспорта 0 - com port, 1 - tcp socket
             settings - настройки:
-                com_port:{"port": "com1", "speed":115200, "timeout":2, "writeTimeout":2}
+                com_port:{"port": "com1", "baudrate":115200, "timeout":2, "writeTimeout":2}
                 tcp_socket:{"host":"192.168.0.91", "port":1111}
         '''
         try:
