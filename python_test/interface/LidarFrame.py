@@ -9,8 +9,8 @@ import time
 import pickle
 import os
 from tcp_rpc.client import Client
-from Vec2d import Vec2d
-from LineFeaturesMaker import LineFeaturesMaker
+from lidar.Vec2d import Vec2d
+from lidar.LineFeaturesMaker import LineFeaturesMaker
 from cross_detector.ffmpeg_reader import FFmpegReader
 
 logger = logging.getLogger(__name__)

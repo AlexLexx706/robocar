@@ -2,7 +2,7 @@
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
-from protocol import Protocol
+from car_controll.protocol import Protocol
 import pyqtgraph as pg
 import numpy as np
 import math
