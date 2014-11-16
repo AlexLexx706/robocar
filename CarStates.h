@@ -76,9 +76,6 @@ class TurnAngleState: public State
 {
 public:
     struct StartParams{
-        //использовать абсолютный угол
-        boolean use_abs_angle;
-
         //значение угла радианы
         float angle;
         
@@ -109,6 +106,7 @@ private:
     
     float start_angle;
     float angle_step;
+    float param_angle;
     unsigned long cur_count;
     unsigned long common_count;
     unsigned long stable_window;

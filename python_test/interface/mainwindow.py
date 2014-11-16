@@ -9,6 +9,7 @@ import math
 from robot_scene import RobotScene
 from robot_scene import RobotScene
 from LidarFrame import LidarFrame
+import Queue
 
 class MainWindow(QtGui.QMainWindow):
     KEY_A = 65
@@ -16,12 +17,20 @@ class MainWindow(QtGui.QMainWindow):
     KEY_D = 68
     KEY_S = 83
     CHECKED_KEYS = [KEY_A, KEY_W, KEY_D, KEY_S]
+    add_line = pyqtSignal(str)
+    update_info = pyqtSignal(object)
+    
     
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
         uic.loadUi("main_window.ui", self)
         self.settings = QtCore.QSettings("AlexLexx", "car_controlls")
-        self.protocol = Protocol()
+        
+        self.read_protocol_res_thread = threading.Thread(target=self.read_protocol_res)
+        self.protocol_result_queue = Queue.Queue()
+        self.read_protocol_res_thread.start()
+
+        self.protocol = Protocol(self.protocol_result_queue)
 
         self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
@@ -44,8 +53,8 @@ class MainWindow(QtGui.QMainWindow):
         self.set_connection_type(self.settings.value("connection_type", 0).toInt()[0])
 
         #self.add_char.connect(self.on_add_char)
-        self.protocol.add_line.connect(self.on_add_line)
-        self.protocol.update_info.connect(self.on_update_info)
+        self.add_line.connect(self.on_add_line)
+        self.update_info.connect(self.on_update_info)
         
         self.kay_states = {self.KEY_A: False,
                             self.KEY_W: False,
@@ -87,8 +96,15 @@ class MainWindow(QtGui.QMainWindow):
         self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
         self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
         self.lidar_frame.label_video.addAction(self.action_reset_camera)
-        self.set_angle_first = True
 
+    def read_protocol_res(self):
+        while 1:
+            data = self.protocol_result_queue.get()
+            #текст
+            if data[0] == 0:
+                self.add_line.emit(data[1])
+            elif data[0] == 1:
+                self.update_info.emit(data[1])
 
     def get_connection_type(self):
         return 0 if self.radioButton_com.isChecked() else 1
@@ -232,14 +248,7 @@ class MainWindow(QtGui.QMainWindow):
                 if self.r != 0 or self.l != 0:
                     self.wheel_timer.start()
 
-    def check_set_angle(self):
-        return True
-        if self.protocol.is_connected():
-            if self.set_angle_first or self.protocol.get_set_angle_res() is not None:
-                self.set_angle_first = False
-                return True
-        return False
-        
+       
     def on_update_wheels(self):
         if not self.use_giro_control:
             self.protocol.set_left_wheel_power(self.l)
@@ -251,12 +260,10 @@ class MainWindow(QtGui.QMainWindow):
             power = 0.6
             
             if self.kay_states[self.KEY_A]:
-                if self.check_set_angle():
-                    self.protocol.set_angle(angle, angle_speed=angle_speed)
+                self.protocol.turn(angle, angle_speed=angle_speed)
                         
             elif self.kay_states[self.KEY_D]:
-                if self.check_set_angle():
-                    self.protocol.set_angle(-angle, angle_speed=angle_speed)
+                self.protocol.turn(-angle, angle_speed=angle_speed)
 
             if self.kay_states[self.KEY_W]:
                 self.protocol.set_offset(power)
@@ -551,8 +558,7 @@ class MainWindow(QtGui.QMainWindow):
         
         self.settings.setValue("angle", angle)
 
-        if self.check_set_angle():
-            self.protocol.set_angle(angle)
+        self.protocol.turn(angle)
     
     def get_wheel_id(self):
         if self.radioButton_left_wheel_speed.isChecked():

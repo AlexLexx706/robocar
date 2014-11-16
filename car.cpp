@@ -304,7 +304,6 @@ void Car::process_command(uint8_t * data, uint8_t data_size)
             TurnAngleState::StartParams s_p;
 
             s_p.angle = 0.;
-            s_p.use_abs_angle = false;
             s_p.angle_speed = PI / 180.f * 90.f;
             turn_angle_state->start(&s_p);
         }

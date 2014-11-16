@@ -134,6 +134,7 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     power_offset(0.),
     dt(10000),
     time_before(micros()),
+    param_angle(0),
     cur_count(0),
     common_count(0),
     stable_window(100),
@@ -172,8 +173,6 @@ void TurnAngleState::start(void * param)
 
     //распечатаем значения.
     if (car.debug){
-        Serial.print("use_abs_angle: ");
-        Serial.print(s_params->use_abs_angle);
         Serial.print("\nangle: ");
         Serial.print(s_params->angle);
         Serial.print("\nspeed: ");
@@ -181,14 +180,8 @@ void TurnAngleState::start(void * param)
     }
 
     start_angle = car.giro_angles[0];
-    float dest_angle;
-
-    if (s_params->use_abs_angle){
-        dest_angle = s_params->angle;
-    //относителный угол
-    }else{
-        dest_angle = start_angle  + s_params->angle;
-    }
+    param_angle = s_params->angle;
+    float dest_angle = start_angle  + param_angle;
 
     //рассчитаем шаг угла и количество итераций.
     float error = get_error(start_angle, dest_angle);
@@ -261,7 +254,7 @@ State::ProcessState TurnAngleState::process()
     error = get_error(car.giro_angles[0], angle);
 
     //проверка завершения
-    if (common_count > 0 && cur_count == common_count + stable_window){
+    if (param_angle != 0.0 && cur_count == common_count + stable_window){
         Serial.println("Good complete");
         send_resp(get_error(car.giro_angles[0], start_angle));
     }

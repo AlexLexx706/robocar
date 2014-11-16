@@ -155,7 +155,7 @@ class LidarFrame(QtGui.QFrame):
                 data = data[0]
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
-                print self.lfm.get_distances(lines)
+                #print self.lfm.get_distances(lines)
 
                 self.new_data.emit(clusters_list)
                     
@@ -176,7 +176,7 @@ class LidarFrame(QtGui.QFrame):
 
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
-                print self.lfm.get_distances(lines)
+                #print self.lfm.get_distances(lines)
 
                 self.new_data.emit(clusters_list)
                 time.sleep(1.0)

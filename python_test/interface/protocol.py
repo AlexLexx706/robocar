@@ -3,14 +3,9 @@ import serial
 import struct
 import logging
 import threading
-from PyQt4 import QtCore
-from PyQt4.QtCore import pyqtSignal
 import time
 import socket
 from math import pi as PI
-#from tcp_rpc.client import Client
-
-
 logger = logging.getLogger(__name__)
 
 class TcpSerial:
@@ -35,18 +30,16 @@ class TcpSerial:
         self.s.close()
         
 
-class Protocol(QtCore.QObject):
+class Protocol:
     '''Реализация протокола управления машинкой'''
-    add_line = pyqtSignal(str)
-    update_info = pyqtSignal(object)
-    
+   
     CMD_SET_LEFT_WHEEL_POWER = 0
     CMD_SET_RIGTH_WHEEL_POWER = 1
     CMD_SET_WHEELS_POWER = 2
     CMD_SET_POWER_ZERRO = 3
     CMD_START_WALK = 4
     CMD_PID_SETTINGS = 5
-    CMD_ANGLE = 6
+    CMD_TURN = 6
     CMD_ENABLE_DEBUG = 7
     CMD_SET_POWER_OFFSET = 8
     CMD_SET_WHEEL_SPEED = 9
@@ -54,16 +47,21 @@ class Protocol(QtCore.QObject):
     CMD_SET_INFO_PERIOD = 11
     ACC_INFO = 12
    
-    def __init__(self):
+    def __init__(self, result_queue=None):
+        '''Реализация протокола управления машиной
+            result_queue - получает сообщения передаваемые машиной, формат данных:
+            (int - тип сообщения, data - данные сообщения)
+            сечас два типа сообщений: 0 - текст, 1 - состояние датчиков.
+        '''
         try:
             logger.debug("->")
-            QtCore.QObject.__init__(self)
 
             self.serial = None
             self.stop_read = True
             self.last_info = None
-            self.lock = threading.Lock()
-            self.set_angle_res = []
+            self.sa_condition = threading.Condition()
+            self.sa_res = None
+            self.result_queue = result_queue
         finally:
             logger.debug("<-")
         
@@ -88,19 +86,15 @@ class Protocol(QtCore.QObject):
                             #получили новые данные о состояние.
                             if acc == self.ACC_INFO:
                                 self.last_info = struct.unpack('<fffhhhfllllBB', data)
-                                self.update_info.emit(self.last_info)
+                                if self.result_queue is not None:
+                                    self.result_queue.put((1, self.last_info))
                             #завершение команды поворота
-                            elif acc == self.CMD_ANGLE:
+                            elif acc == self.CMD_TURN:
                                 angle = -struct.unpack('<f', data)[0]
-                                print "CMD_ANGLE coplete angle:", angle
-
-                                with self.lock:
-                                    self.set_angle_res.append(angle)
+                                with self.sa_condition:
+                                    self.sa_res = angle
+                                    self.sa_condition.notify()
                                     
-                                    #против переполнения
-                                    if len(self.set_angle_res) > 2:
-                                        logger.warning("len(self.set_angle_res) > 2!!!")
-                                        self.set_angle_res.pop(0)
 
                         except Exception as e:
                             logging.error(str(e))
@@ -109,7 +103,8 @@ class Protocol(QtCore.QObject):
                         if s != "\n":
                             line += s
                         else:
-                            self.add_line.emit(line)
+                            if self.result_queue is not None:
+                                self.result_queue.put((0, line))
                             line = ""
         finally:
             logger.debug("read_proc <-")
@@ -178,31 +173,34 @@ class Protocol(QtCore.QObject):
             data = struct.pack("<BBfff", self.CMD_PID_SETTINGS, type, p, i, d)
             self.write(struct.pack("<B", len(data)) + data)
 
-    def set_angle(self, angle, use_abs_angle=False, angle_speed=PI / 180. * 90.):
+    def turn(self, angle, angle_speed=PI / 180. * 90.):
         '''
-        Установить направление двидения или абсолютный угол.
-        angle - угол в рад., если use_abs_angle=false, то угол выставляется относительно текущего значения направления, 
-            и при значение > нуля - направление вращения корпуса против часовой стрелки,
-            при значение < нуля - направление вращения корпуса по часовой стрелке.
-        use_abs_angle - тип угла True - абсолютный угол, False - относительный угол
+        Повернуть на угол, комманда синхронная.
+        angle - угол в рад., при значение > нуля - направление вращения корпуса против часовой стрелки,
+                             при значение < нуля - направление вращения корпуса по часовой стрелке.
         angle_speed - скорость вращения рад./сек.
+        #
         '''
         try:
-            logger.debug("(angle:{} use_abs_angle:{} angle_speed:{})->".format(angle, use_abs_angle, angle_speed))
+            logger.debug("(angle:{} angle_speed:{})->".format(angle, angle_speed))
+            
+            #нельзя поворачивать на нуливой угол
+            if angle == 0.0:
+                return 0.0
 
             if self.serial is not None:
-                data = struct.pack("<BBff", self.CMD_ANGLE, use_abs_angle, angle, angle_speed)
+                with self.sa_condition:
+                    self.sa_res = None
+
+                data = struct.pack("<Bff", self.CMD_TURN, angle, angle_speed)
                 self.write(struct.pack("<B", len(data)) + data)
+                
+                with self.sa_condition:
+                    while self.sa_res is None:
+                        self.sa_condition.wait()
+                    return self.sa_res
         finally:
             logger.debug("<-")
-    
-    def get_set_angle_res(self):
-        '''Возвращает угол на который машина повернулась для последней комманды set_angle'''
-        with self.lock:
-            if len(self.set_angle_res):
-                print "!!!!!!!!!!!!"
-                return self.set_angle_res.pop(0)
-            return None
 
     def set_offset(self, offset):
         '''
