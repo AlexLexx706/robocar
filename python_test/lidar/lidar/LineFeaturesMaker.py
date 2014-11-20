@@ -19,6 +19,28 @@ class LineFeaturesMaker:
             res.append(self.split_and_merge_cluster(cluster))
         return res
 
+    def linearization_clusters_data(self, clusters_list):
+        '''Преобразует данные сектора в кластеры линий'''
+        p_dist = 2.0
+        
+        for clusters in clusters_list:
+            for i, cluster in enumerate(clusters):
+                s_p = cluster[0]
+                e_p = cluster[-1]
+                direction = e_p - s_p
+                l = direction.normalize_return_length()
+                count = int(l / p_dist)
+                
+                #мало чточек
+                if count  < 2:
+                    clusters[i] = [s_p, e_p]
+                else:
+                    print i, len(clusters)
+                    clusters[i] = [s_p + direction * (p_dist * k) for k in range(count)]
+                    clusters[i].append(e_p)
+        return clusters_list
+
+        
     def clusters_to_lines(self, clusters_list):
         '''Преобразует список кластеров в линии (start, stop, direction, normal)'''
         lines = []

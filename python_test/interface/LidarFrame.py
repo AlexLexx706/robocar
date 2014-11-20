@@ -178,8 +178,9 @@ class LidarFrame(QtGui.QFrame):
                 lines = self.lfm.clusters_to_lines(clusters_list)
                 #print self.lfm.get_distances(lines)
 
-                self.new_data.emit(clusters_list)
-                time.sleep(1.0)
+                self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
+                #self.new_data.emit(clusters_list)
+                time.sleep(0.1)
             #конец файла
             except EOFError:
                 stream = pickle.Unpickler(open(file_path, "rb"))
@@ -190,7 +191,8 @@ class LidarFrame(QtGui.QFrame):
         brushes = [
             pg.mkBrush(255, 0, 0),
             pg.mkBrush(0, 255, 0),
-            pg.mkBrush(0, 0, 255)]
+            pg.mkBrush(0, 0, 255)
+        ]
 
         i = 0
 

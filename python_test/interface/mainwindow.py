@@ -260,10 +260,10 @@ class MainWindow(QtGui.QMainWindow):
             power = 0.6
             
             if self.kay_states[self.KEY_A]:
-                self.protocol.turn(angle, angle_speed=angle_speed)
+                self.protocol.turn(angle, angle_speed=angle_speed, no_wait=True)
                         
             elif self.kay_states[self.KEY_D]:
-                self.protocol.turn(-angle, angle_speed=angle_speed)
+                self.protocol.turn(-angle, angle_speed=angle_speed, no_wait=True)
 
             if self.kay_states[self.KEY_W]:
                 self.protocol.set_offset(power)

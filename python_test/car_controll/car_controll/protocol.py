@@ -173,7 +173,7 @@ class Protocol:
             data = struct.pack("<BBfff", self.CMD_PID_SETTINGS, type, p, i, d)
             self.write(struct.pack("<B", len(data)) + data)
 
-    def turn(self, angle, angle_speed=PI / 180. * 90.):
+    def turn(self, angle, angle_speed=PI / 180. * 90., no_wait=False):
         '''
         Повернуть на угол, комманда синхронная.
         angle - угол в рад., при значение > нуля - направление вращения корпуса против часовой стрелки,
@@ -195,10 +195,11 @@ class Protocol:
                 data = struct.pack("<Bff", self.CMD_TURN, angle, angle_speed)
                 self.write(struct.pack("<B", len(data)) + data)
                 
-                with self.sa_condition:
-                    while self.sa_res is None:
-                        self.sa_condition.wait()
-                    return self.sa_res
+                if not no_wait:
+                    with self.sa_condition:
+                        while self.sa_res is None:
+                            self.sa_condition.wait()
+                        return self.sa_res
         finally:
             logger.debug("<-")
 

@@ -19,6 +19,28 @@ class LineFeaturesMaker:
             res.append(self.split_and_merge_cluster(cluster))
         return res
 
+    def linearization_clusters_data(self, clusters_list):
+        '''Преобразует данные сектора в кластеры линий'''
+        p_dist = 2.0
+        
+        for clusters in clusters_list:
+            for i, cluster in enumerate(clusters):
+                s_p = cluster[0]
+                e_p = cluster[-1]
+                direction = e_p - s_p
+                l = direction.normalize_return_length()
+                count = int(l / p_dist)
+                
+                #мало чточек
+                if count  < 2:
+                    clusters[i] = [s_p, e_p]
+                else:
+                    print i, len(clusters)
+                    clusters[i] = [s_p + direction * (p_dist * i) for i in range(count)]
+                    clusters[i].append(e_p)
+        return clasters
+
+        
     def clusters_to_lines(self, clusters_list):
         '''Преобразует список кластеров в линии (start, stop, direction, normal)'''
         lines = []
@@ -89,10 +111,8 @@ class LineFeaturesMaker:
         for i, value in enumerate(data["values"]):
             if max_len is not None and value > max_len:
                 continue
-
-            x = math.cos(start_angle + da * i) * value
-            y = math.sin(start_angle + da * i) * value
-            res.append((x, y, value))
+            res.append(Vec2d(math.cos(start_angle + da * i) * value,
+                              math.sin(start_angle + da * i) * value))
         return res
 
     def make_clusters(self, points):
@@ -106,7 +126,7 @@ class LineFeaturesMaker:
 
         def check(s_pos, c_pos):
             '''проверка группировки в кластер, по максимальному шагу'''
-            l = (Vec2d(s_pos) - Vec2d(c_pos)).get_length()
+            l = (s_pos - c_pos).get_length()
 
             #найдём среднюю длинну
             #max_offset = (min(s_pos[2], c_pos[2]) + abs(s_pos[2] - c_pos[2]) / 2.0) * math.pi / 180. * 6
@@ -137,15 +157,15 @@ class LineFeaturesMaker:
             #проверим максимальное отклонение от направления
             if len(cluster) > 2:
                 #нормаль к прямой.
-                s_pos = Vec2d(cluster[0])
-                normal = (Vec2d(cluster[-1]) - s_pos).perpendicular_normal()
+                s_pos = cluster[0]
+                normal = (cluster[-1] - s_pos).perpendicular_normal()
 
                 #поиск максимума
                 max = 0
                 max_i = 0
 
                 for i, pos in enumerate(cluster[1:-1]):
-                    p = abs(normal.dot(Vec2d(pos) - s_pos))
+                    p = abs(normal.dot(pos - s_pos))
 
                     if p > max:
                         max = p
@@ -173,8 +193,7 @@ class LineFeaturesMaker:
                 while i < len(clusters):
                     cur = clusters[i]
 
-                    #v = (Vec2d(first[-1]) - Vec2d(first[0])).normalized().get_angle_between((Vec2d(cur[-1]) - Vec2d(cur[0])).normalized())
-                    v = (Vec2d(cur[-1]) - Vec2d(first[0])).perpendicular_normal().dot(Vec2d(first[-1]) - Vec2d(first[0]))
+                    v = (cur[-1] - first[0]).perpendicular_normal().dot(first[-1] - first[0])
 
                     #проверка обьединения.
                     if abs(v) < threshold:
