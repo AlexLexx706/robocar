@@ -192,14 +192,7 @@ class LidarFrame(QtGui.QFrame):
 
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
-                #print self.lfm.get_distances(lines)
-
                 self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-
-                #найдём похожие линии.
-                self.calcl_odometry(lines)
-
-                #self.new_data.emit(clusters_list)
                 time.sleep(0.5)
             #конец файла
             except EOFError:
@@ -217,6 +210,8 @@ class LidarFrame(QtGui.QFrame):
         i = 0
         self.w1.clear()
         self.w1.addItem(self.s1)
+        self.w1.addItem(pg.InfiniteLine((10,10), 15))
+
         for cluster in data:
             for c in cluster:
                 self.s1.addPoints(pos=c, brush=brushes[i % len(brushes)])

@@ -137,7 +137,7 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     param_angle(0),
     cur_count(0),
     common_count(0),
-    stable_window(100),
+    stable_window(0),
     error_window(PI / 180.f * 10.f),
     first(true)
 {
