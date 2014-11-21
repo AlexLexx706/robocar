@@ -106,8 +106,12 @@ class LineFeaturesMaker:
         for i, d_desc in enumerate(directions):
             d_dir, d_norm = d_desc
 
-            for l_p1, l_p2, l_d, l_n in lines:
+            for l_desc in lines:
                 #поиск проекций.
+                l_p1 = l_desc["pos"]
+                l_p2 = l_desc["end"]
+                l_d = l_desc["dir"]
+                l_n = l_desc["normal"]
 
                 #проекция пересекает направление и нормали ок.
                 if d_dir.dot(l_p1) >= 0.0 and d_dir.dot(l_p2) <= 0 and d_norm.dot(l_n) < 0.0:

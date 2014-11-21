@@ -192,6 +192,7 @@ class LidarFrame(QtGui.QFrame):
 
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
+                self.lfm.get_distances(lines)
                 self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
                 time.sleep(0.5)
             #конец файла
