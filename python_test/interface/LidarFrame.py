@@ -46,6 +46,8 @@ class LidarFrame(QtGui.QFrame):
         
         self.video_thread = None
         self.new_video_frame.connect(self.on_new_video_frame)
+        self.lines_before = None
+        self.odometry_angle = 0.0
     
     def start_video(self):
         if self.video_thread is None:
@@ -58,7 +60,6 @@ class LidarFrame(QtGui.QFrame):
             self.reader.release()
             self.video_thread.join()
             self.video_thread = None
-            print "!!!!!!!!!!!!!"
             self.label_video.setPixmap(QtGui.QPixmap(":/res/Video.png"))
             
     def read_frame(self):
@@ -148,6 +149,9 @@ class LidarFrame(QtGui.QFrame):
         if out_file is not None:
             out_file = pickle.Pickler(open(out_file, "wb"))
 
+        self.lines_before = None
+        self.odometry_angle = 0.0
+
         while not self.stop_flag:
             data = client.ik_get_sector(1)
 
@@ -155,13 +159,22 @@ class LidarFrame(QtGui.QFrame):
                 data = data[0]
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
-                #print self.lfm.get_distances(lines)
+                #self.new_data.emit(clusters_list)
+                self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
+                self.calcl_odometry(lines)
 
-                self.new_data.emit(clusters_list)
-                    
                 #пишем поток.
                 if out_file is not None:
                     out_file.dump(data)
+
+    def calcl_odometry(self, lines):
+        #найдём похожие линии.
+        if self.lines_before is not None:
+            similar = self.lfm.search_similar(self.lines_before, lines)
+            self.odometry_angle += similar
+            print self.odometry_angle
+
+        self.lines_before = lines
 
 
     def read_file_proc(self, file_path):
@@ -169,7 +182,10 @@ class LidarFrame(QtGui.QFrame):
             return
 
         stream = pickle.Unpickler(open(file_path, "rb"))
-       
+        self.lines_before = None
+        self.odometry_angle = 0.0
+
+
         while not self.stop_flag:
             try:
                 data = stream.load()
@@ -179,8 +195,12 @@ class LidarFrame(QtGui.QFrame):
                 #print self.lfm.get_distances(lines)
 
                 self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
+
+                #найдём похожие линии.
+                self.calcl_odometry(lines)
+
                 #self.new_data.emit(clusters_list)
-                time.sleep(0.1)
+                time.sleep(0.5)
             #конец файла
             except EOFError:
                 stream = pickle.Unpickler(open(file_path, "rb"))
@@ -195,11 +215,19 @@ class LidarFrame(QtGui.QFrame):
         ]
 
         i = 0
-
+        self.w1.clear()
+        self.w1.addItem(self.s1)
         for cluster in data:
             for c in cluster:
                 self.s1.addPoints(pos=c, brush=brushes[i % len(brushes)])
+
+                text = pg.TextItem(text=str(i))
+                self.w1.addItem(text)
+                text.setPos(c[0][0], c[0][1])
                 i += 1
+
+
+
 
 if __name__ == '__main__':
     import sys

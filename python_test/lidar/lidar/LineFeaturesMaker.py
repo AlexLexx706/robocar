@@ -35,7 +35,6 @@ class LineFeaturesMaker:
                 if count  < 2:
                     clusters[i] = [s_p, e_p]
                 else:
-                    print i, len(clusters)
                     clusters[i] = [s_p + direction * (p_dist * k) for k in range(count)]
                     clusters[i].append(e_p)
         return clusters_list
@@ -49,10 +48,43 @@ class LineFeaturesMaker:
             for cluster in clusters:
                 p1 = Vec2d(cluster[0])
                 p2 = Vec2d(cluster[-1])
-                d = (p2 - p1).normalized()
+                d = (p2 - p1)
+                l = d.normalize_return_length()
                 n = d.perpendicular()
-                lines.append((p1, p2, d, n))
+                lines.append((p1, p2, d, n, l, (p1 + d * (l / 2.0)).get_length() ))
         return lines
+
+    def search_similar(self, before_lines_frame, cur_lines_frame, max_angle=10., max_distance=10):
+        '''Поиск похожих линий в кадрах'''
+        similar_list = []
+
+        for i, c_l in enumerate(cur_lines_frame):
+            for j, b_l in enumerate(before_lines_frame):
+                #сравним угол и расстояние
+                angle = c_l[3].get_angle_between(b_l[3])
+                if abs(angle) < max_angle:
+
+                    #сравним расстояние.
+                    dist = (c_l[5] - b_l[5])
+                    if abs(dist) < max_distance:
+                        similar_list.append((i,j, angle, dist))
+                        break
+
+        #найдём ниболее верное угловое смещение.
+        if len(similar_list):
+            info = similar_list[0]
+            max = cur_lines_frame[info[0]][4]
+            angle = info[2]
+
+            for info in similar_list[1:]:
+                l = cur_lines_frame[info[0]][4]
+
+                if l > max:
+                    max = l
+                    angle = info[2]
+
+            return angle
+        return 0
 
     def get_distances(self, lines):
         '''Найдём расстояние до передней, левой, задней, правой стенок.'''
