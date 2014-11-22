@@ -39,7 +39,7 @@ class LidarFrame(QtGui.QFrame):
         self.w1.showGrid(x=True, y=True)
         self.w1.setAspectLocked()
         
-        self.s1 = pg.ScatterPlotItem(size=5, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 120))
+        self.s1 = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 120))
         self.w1.addItem(self.s1)
         self.write_file = None
         self.lfm = LineFeaturesMaker()
@@ -48,6 +48,8 @@ class LidarFrame(QtGui.QFrame):
         self.new_video_frame.connect(self.on_new_video_frame)
         self.lines_before = None
         self.odometry_angle = 0.0
+        self.data_before =  None
+        self.next_event = threading.Event()
     
     def start_video(self):
         if self.video_thread is None:
@@ -122,6 +124,10 @@ class LidarFrame(QtGui.QFrame):
     def on_checkBox_record_toggled(self, v):
         self.settings.setValue("lidar_record", v)
 
+    @pyqtSlot(bool)
+    def on_pushButton_next_clicked(self):
+        self.next_event.set()
+
     def start(self):
         url = (unicode(self.lineEdit_host.text()), self.spinBox_port.value())
 
@@ -171,8 +177,9 @@ class LidarFrame(QtGui.QFrame):
         #найдём похожие линии.
         if self.lines_before is not None:
             similar = self.lfm.search_similar(self.lines_before, lines)
-            self.odometry_angle += similar
-            print self.odometry_angle
+            print similar
+            #self.odometry_angle += similar
+            #print self.odometry_angle
 
         self.lines_before = lines
 
@@ -193,8 +200,12 @@ class LidarFrame(QtGui.QFrame):
                 clusters_list = self.lfm.sector_to_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
                 self.lfm.get_distances(lines)
+                self.calcl_odometry(lines)
+
                 self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-                time.sleep(0.5)
+                #time.sleep(0.5)
+                self.next_event.wait()
+                self.next_event.clear()
             #конец файла
             except EOFError:
                 stream = pickle.Unpickler(open(file_path, "rb"))
@@ -202,25 +213,37 @@ class LidarFrame(QtGui.QFrame):
 
     def on_new_data(self, data):
         self.s1.clear()
-        brushes = [
-            pg.mkBrush(255, 0, 0),
-            pg.mkBrush(0, 255, 0),
-            pg.mkBrush(0, 0, 255)
-        ]
 
         i = 0
         self.w1.clear()
-        self.w1.addItem(self.s1)
-        self.w1.addItem(pg.InfiniteLine((10,10), 15))
 
+        if self.data_before is not None:
+            br = pg.mkBrush(0, 255, 0, 255)
+            s2 = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=br)
+            self.w1.addItem(s2)
+
+            for cluster in self.data_before:
+                for c in cluster:
+                    s2.addPoints(pos=c)
+
+                    text = pg.TextItem(text=str(i), color=(0, 255, 0, 255))
+                    self.w1.addItem(text)
+                    text.setPos(c[0][0], c[0][1])
+                    i += 1
+
+
+        i = 0
+        self.w1.addItem(self.s1)
         for cluster in data:
             for c in cluster:
-                self.s1.addPoints(pos=c, brush=brushes[i % len(brushes)])
+                self.s1.addPoints(pos=c, brush=pg.mkBrush(255, 0, 0, 255))
 
-                text = pg.TextItem(text=str(i))
+                text = pg.TextItem(text=str(i), color=(255, 0, 0, 255))
                 self.w1.addItem(text)
                 text.setPos(c[0][0], c[0][1])
                 i += 1
+
+        self.data_before = data
 
 
 

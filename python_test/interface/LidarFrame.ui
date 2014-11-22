@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>607</height>
+    <width>511</width>
+    <height>389</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -100,6 +100,19 @@
         </property>
         <property name="text">
          <string>Старт</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="4">
+       <widget class="QPushButton" name="pushButton_next">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Minimum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>Next</string>
         </property>
        </widget>
       </item>
