@@ -35,12 +35,10 @@ class LidarFrame(QtGui.QFrame):
         self.checkBox_record.setChecked(self.settings.value("lidar_record", False).toBool())
 
         ## create four areas to add plots
-        self.w1 = self.view.addPlot()
-        self.w1.showGrid(x=True, y=True)
-        self.w1.setAspectLocked()
-        
-        self.s1 = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 120))
-        self.w1.addItem(self.s1)
+        self.plot = self.view.addPlot()
+        self.plot.showGrid(x=True, y=True)
+        self.plot.setAspectLocked()
+
         self.write_file = None
         self.lfm = LineFeaturesMaker()
         
@@ -146,6 +144,7 @@ class LidarFrame(QtGui.QFrame):
     def stop(self):
         if not self.stop_flag:
             self.stop_flag = True
+            self.next_event.set()
             self.read_thread.join()
 
     def read_proc(self, url, out_file):
@@ -163,7 +162,7 @@ class LidarFrame(QtGui.QFrame):
 
             if data is not None:
                 data = data[0]
-                clusters_list = self.lfm.sector_to_clusters(data)
+                clusters_list = self.lfm.sector_to_lines_clusters(data)
                 lines = self.lfm.clusters_to_lines(clusters_list)
                 #self.new_data.emit(clusters_list)
                 self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
@@ -197,12 +196,13 @@ class LidarFrame(QtGui.QFrame):
             try:
                 data = stream.load()
 
-                clusters_list = self.lfm.sector_to_clusters(data)
-                lines = self.lfm.clusters_to_lines(clusters_list)
-                self.lfm.get_distances(lines)
-                self.calcl_odometry(lines)
+                clusters_list = self.lfm.sector_to_lines_clusters(data)
+                self.new_data.emit(clusters_list)
+                #lines = self.lfm.clusters_to_lines(clusters_list)
+                #self.lfm.get_distances(lines)
+                #self.calcl_odometry(lines)
 
-                self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
+                #self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
                 #time.sleep(0.5)
                 self.next_event.wait()
                 self.next_event.clear()
@@ -211,40 +211,26 @@ class LidarFrame(QtGui.QFrame):
                 stream = pickle.Unpickler(open(file_path, "rb"))
                 time.sleep(1)
 
-    def on_new_data(self, data):
-        self.s1.clear()
+    def draw_data(self, data, color=(0, 255, 0, 255)):
+       if data is not None:
+            spi = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=pg.mkBrush(color))
+            self.plot.addItem(spi)
+            i = 0
 
-        i = 0
-        self.w1.clear()
-
-        if self.data_before is not None:
-            br = pg.mkBrush(0, 255, 0, 255)
-            s2 = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=br)
-            self.w1.addItem(s2)
-
-            for cluster in self.data_before:
+            for cluster in data:
                 for c in cluster:
-                    s2.addPoints(pos=c)
+                    spi.addPoints(pos=c)
 
-                    text = pg.TextItem(text=str(i), color=(0, 255, 0, 255))
-                    self.w1.addItem(text)
+                    text = pg.TextItem(text=str(i), color=color)
+                    self.plot.addItem(text)
                     text.setPos(c[0][0], c[0][1])
                     i += 1
 
-
-        i = 0
-        self.w1.addItem(self.s1)
-        for cluster in data:
-            for c in cluster:
-                self.s1.addPoints(pos=c, brush=pg.mkBrush(255, 0, 0, 255))
-
-                text = pg.TextItem(text=str(i), color=(255, 0, 0, 255))
-                self.w1.addItem(text)
-                text.setPos(c[0][0], c[0][1])
-                i += 1
-
+    def on_new_data(self, data):
+        self.plot.clear()
+        #self.draw_data(self.data_before, (0, 255, 0, 255))
+        self.draw_data(data, (255, 0, 0, 255))
         self.data_before = data
-
 
 
 

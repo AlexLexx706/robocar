@@ -7,10 +7,22 @@ from Vec2d import Vec2d
 class LineFeaturesMaker:
     '''Преобразует сектро точек после лидара в нобор линий'''
     def __init__(self):
-        pass
+        #список направлений.
+        self.directions = [(Vec2d(1.0, 0.0), Vec2d(0.0, 1.0)),
+                      (Vec2d(0.0, 1.0), Vec2d(-1.0, 0.0)),
+                      (Vec2d(-1.0, 0.0), Vec2d(0.0, -1.0)),
+                      (Vec2d(0.0, -1.0), Vec2d(1.0, 0.0))]
 
-    def sector_to_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
-        '''Преобразует данные сектора в кластеры линий'''
+    def sector_to_points_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
+        '''Преобразует данные сектора кластеры точек
+           Возвращаеть лист листов Vec2d
+        '''
+        return [[k,] for k in self.make_clusters(self.sector_to_points(data, start_angle, max_len))]
+
+    def sector_to_lines_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
+        '''Преобразует данные сектора в кластеры линий
+            Возвращаеть лист листов Vec2d
+        '''
         res = []
         for cluster in self.make_clusters(self.sector_to_points(data, start_angle, max_len)):
             #отсекаем кластеры меньше 5 точек.
@@ -20,7 +32,7 @@ class LineFeaturesMaker:
         return res
 
     def linearization_clusters_data(self, clusters_list):
-        '''Преобразует данные сектора в кластеры линий'''
+        '''Преобразует данные кластеров точек в кластеры точек в которых точки в кластере выстроены вдоль направления кластера'''
         p_dist = 2.0
         
         for clusters in clusters_list:
@@ -31,7 +43,7 @@ class LineFeaturesMaker:
                 l = direction.normalize_return_length()
                 count = int(l / p_dist)
                 
-                #мало чточек
+                #мало точек
                 if count  < 2:
                     clusters[i] = [s_p, e_p]
                 else:
@@ -51,30 +63,33 @@ class LineFeaturesMaker:
                 d = (p2 - p1)
                 l = d.normalize_return_length()
                 n = d.perpendicular()
+                center = p1 + d * l / 2.0
+                distance = center.get_length()
                 lines.append({"pos": p1,
                               "end": p2,
                               "dir": d,
                               "normal": n,
                               "length": l,
-                              "center": p1 + d * l / 2.0})
+                              "center": center,
+                              "distance": distance})
         return lines
 
     def search_similar(self, before_lines_frame, cur_lines_frame, max_angle=10., max_distance=10):
         '''Поиск похожих линий в кадрах'''
-        return 0
         similar_list = []
 
         for i, c_l in enumerate(cur_lines_frame):
             for j, b_l in enumerate(before_lines_frame):
                 #сравним угол и расстояние
-                angle = c_l[3].get_angle_between(b_l[3])
+                angle = c_l["normal"].get_angle_between(b_l["normal"])
                 if abs(angle) < max_angle:
 
                     #сравним расстояние.
-                    dist = (c_l[5] - b_l[5])
+                    dist = (c_l["distance"] - b_l["distance"])
                     if abs(dist) < max_distance:
                         similar_list.append((i,j, angle, dist))
                         break
+        return similar_list
 
         #найдём ниболее верное угловое смещение.
         if len(similar_list):
@@ -94,16 +109,9 @@ class LineFeaturesMaker:
 
     def get_distances(self, lines):
         '''Найдём расстояние до передней, левой, задней, правой стенок.'''
-
-        #список направлений.
-        directions = [(Vec2d(1.0, 0.0), Vec2d(0.0, 1.0)),
-                      (Vec2d(0.0, 1.0), Vec2d(-1.0, 0.0)),
-                      (Vec2d(-1.0, 0.0), Vec2d(0.0, -1.0)),
-                      (Vec2d(0.0, -1.0), Vec2d(1.0, 0.0))]
-
         directions_res = [None, None, None, None]
 
-        for i, d_desc in enumerate(directions):
+        for i, d_desc in enumerate(self.directions):
             d_dir, d_norm = d_desc
 
             for l_desc in lines:
@@ -164,14 +172,12 @@ class LineFeaturesMaker:
 
         s_pos = points[0]
         clasters = [[s_pos, ]]
-        max_offset = 10
+        max_offset = 30
 
         def check(s_pos, c_pos):
             '''проверка группировки в кластер, по максимальному шагу'''
             l = (s_pos - c_pos).get_length()
-
             #найдём среднюю длинну
-            #max_offset = (min(s_pos[2], c_pos[2]) + abs(s_pos[2] - c_pos[2]) / 2.0) * math.pi / 180. * 6
             return l < max_offset
 
         #создадим кластеры
