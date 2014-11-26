@@ -12,6 +12,7 @@ from tcp_rpc.client import Client
 from lidar.Vec2d import Vec2d
 from lidar.LineFeaturesMaker import LineFeaturesMaker
 from cross_detector.ffmpeg_reader import FFmpegReader
+import Queue
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ class LidarFrame(QtGui.QFrame):
     new_data = pyqtSignal(object)
     new_video_frame = pyqtSignal("QImage")
     
-    def __init__(self, settings, parent=None):
+    def __init__(self, settings, in_gueue_sector_data = None, parent=None):
         super(QtGui.QFrame, self).__init__(parent)
         uic.loadUi("LidarFrame.ui", self)
         self.settings = settings
@@ -48,6 +49,11 @@ class LidarFrame(QtGui.QFrame):
         self.odometry_angle = 0.0
         self.data_before =  None
         self.next_event = threading.Event()
+        self.in_gueue_sector_data = in_gueue_sector_data
+        
+        if self.in_gueue_sector_data is not None:
+            print "!!!!!!!!!!!"
+            self.start()
     
     def start_video(self):
         if self.video_thread is None:
@@ -131,21 +137,40 @@ class LidarFrame(QtGui.QFrame):
 
         if self.stop_flag:
             self.stop_flag = False
-            out_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
-
-            #запуск чтения с датчика
-            if self.groupBox_connection.isChecked():
-                self.read_thread = threading.Thread(target=self.read_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
-            #запуск из файла
+            
+            #чтение из очереди
+            if self.in_gueue_sector_data is not None:
+                self.read_thread = threading.Thread(target=self.read_in_queue_proc)
             else:
-                self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
+                out_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
+
+                #запуск чтения с датчика
+                if self.groupBox_connection.isChecked():
+                    self.read_thread = threading.Thread(target=self.read_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
+                #запуск из файла
+                else:
+                    self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
+
             self.read_thread.start()
     
     def stop(self):
         if not self.stop_flag:
+            if self.in_gueue_sector_data is not None:
+                self.in_gueue_sector_data.put(None)
+
             self.stop_flag = True
             self.next_event.set()
             self.read_thread.join()
+
+    def calcl_odometry(self, lines):
+        #найдём похожие линии.
+        if self.lines_before is not None:
+            similar = self.lfm.search_similar(self.lines_before, lines)
+            print similar
+            #self.odometry_angle += similar
+            #print self.odometry_angle
+
+        self.lines_before = lines
 
     def read_proc(self, url, out_file):
         client = Client(url)
@@ -171,17 +196,6 @@ class LidarFrame(QtGui.QFrame):
                 #пишем поток.
                 if out_file is not None:
                     out_file.dump(data)
-
-    def calcl_odometry(self, lines):
-        #найдём похожие линии.
-        if self.lines_before is not None:
-            similar = self.lfm.search_similar(self.lines_before, lines)
-            print similar
-            #self.odometry_angle += similar
-            #print self.odometry_angle
-
-        self.lines_before = lines
-
 
     def read_file_proc(self, file_path):
         if not os.path.exists(file_path):
@@ -211,6 +225,16 @@ class LidarFrame(QtGui.QFrame):
                 stream = pickle.Unpickler(open(file_path, "rb"))
                 time.sleep(1)
 
+    def read_in_queue_proc(self):
+        while not self.stop_flag:
+            data = self.in_gueue_sector_data.get()
+
+            if data is None:
+                return
+
+            clusters_list = self.lfm.sector_to_lines_clusters(data)
+            self.new_data.emit(clusters_list)
+                
     def draw_data(self, data, color=(0, 255, 0, 255)):
        if data is not None:
             spi = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=pg.mkBrush(color))
@@ -232,14 +256,16 @@ class LidarFrame(QtGui.QFrame):
         self.draw_data(data, (255, 0, 0, 255))
         self.data_before = data
 
-
-
-if __name__ == '__main__':
+def main(in_queue):
     import sys
     logging.basicConfig(filename='', level=logging.DEBUG)
     logging.getLogger("PyQt4").setLevel(logging.INFO)
     
     app = QtGui.QApplication(sys.argv)
-    widget = LidarFrame(QtCore.QSettings("AlexLexx", "car_controlls"))
+    widget = LidarFrame(QtCore.QSettings("AlexLexx", "car_controlls"), in_queue)
     widget.show()
-    sys.exit(app.exec_())  
+    sys.exit(app.exec_())      
+        
+
+if __name__ == '__main__':
+    main(Queue.Queue())
