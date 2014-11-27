@@ -153,7 +153,9 @@ class LineFeaturesMaker:
 
 
     def sector_to_points(self, data, start_angle=0, max_len=1000):
-        '''Преобразует сектор в точки'''
+        '''Преобразует сектор в точки
+            Возвращает лист точек
+        '''
         res = []
         da = data["angle"] / (len(data["values"]))
         data["values"].reverse()

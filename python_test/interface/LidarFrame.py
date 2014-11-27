@@ -256,16 +256,27 @@ class LidarFrame(QtGui.QFrame):
         self.draw_data(data, (255, 0, 0, 255))
         self.data_before = data
 
+def data_from_server(in_queue):
+    client = Client(("192.168.10.154", 8080))
+
+    while 1:
+        data = client.ik_get_sector(1)
+        in_queue.put(data[0])
+        
 def main(in_queue):
     import sys
-    logging.basicConfig(filename='', level=logging.DEBUG)
-    logging.getLogger("PyQt4").setLevel(logging.INFO)
-    
     app = QtGui.QApplication(sys.argv)
     widget = LidarFrame(QtCore.QSettings("AlexLexx", "car_controlls"), in_queue)
     widget.show()
-    sys.exit(app.exec_())      
+    sys.exit(app.exec_())
         
 
 if __name__ == '__main__':
-    main(Queue.Queue())
+    logging.basicConfig(filename='', level=logging.DEBUG)
+    logging.getLogger("PyQt4").setLevel(logging.INFO)
+
+    in_queue = Queue.Queue()
+    threading.Thread(target=data_from_server, args=(in_queue,)).start()
+    main(in_queue)
+
+    #main(None)
