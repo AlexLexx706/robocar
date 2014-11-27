@@ -20,7 +20,7 @@ class LidarFrame(QtGui.QFrame):
     new_data = pyqtSignal(object)
     new_video_frame = pyqtSignal("QImage")
     
-    def __init__(self, settings, in_gueue_sector_data = None, parent=None):
+    def __init__(self, settings, parent=None, in_gueue_sector_data = None):
         super(QtGui.QFrame, self).__init__(parent)
         uic.loadUi("LidarFrame.ui", self)
         self.settings = settings
@@ -266,7 +266,7 @@ def data_from_server(in_queue):
 def main(in_queue):
     import sys
     app = QtGui.QApplication(sys.argv)
-    widget = LidarFrame(QtCore.QSettings("AlexLexx", "car_controlls"), in_queue)
+    widget = LidarFrame(QtCore.QSettings("AlexLexx", "car_controlls"), in_gueue_sector_data=in_queue)
     widget.show()
     sys.exit(app.exec_())
         
