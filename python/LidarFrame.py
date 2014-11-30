@@ -50,6 +50,7 @@ class LidarFrame(QtGui.QFrame):
         self.data_before =  None
         self.next_event = threading.Event()
         self.in_gueue_sector_data = in_gueue_sector_data
+        self.first_draw = True
         
         if self.in_gueue_sector_data is not None:
             print "!!!!!!!!!!!"
@@ -137,6 +138,7 @@ class LidarFrame(QtGui.QFrame):
 
         if self.stop_flag:
             self.stop_flag = False
+            self.first_draw = True
             
             #чтение из очереди
             if self.in_gueue_sector_data is not None:
@@ -266,6 +268,12 @@ class LidarFrame(QtGui.QFrame):
         #self.draw_data(self.data_before, (0, 255, 0, 255))
         self.draw_data(data, (255, 0, 0, 255))
         self.data_before = data
+
+        if self.first_draw:
+            self.plot.autoRange()
+            self.first_draw = False
+
+
 
 def data_from_server(in_queue):
     client = Client(("192.168.10.154", 8080))
