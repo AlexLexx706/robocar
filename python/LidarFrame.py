@@ -268,6 +268,7 @@ class LidarFrame(QtGui.QFrame):
         #self.draw_data(self.data_before, (0, 255, 0, 255))
         self.draw_data(data, (255, 0, 0, 255))
         self.data_before = data
+        self.plot.plot([{"x": 0, "y": 0},{"x": 100, "y": 10}])
 
         if self.first_draw:
             self.plot.autoRange()
