@@ -17,14 +17,24 @@ class LineFeaturesMaker:
         '''Преобразует данные сектора кластеры точек
            Возвращаеть лист листов Vec2d
         '''
-        return [[k,] for k in self.make_clusters(self.sector_to_points(data, start_angle, max_len))]
+
+        #преобразуем сектор в лист точек
+        if isinstance(data, dict):
+            data = self.sector_to_points(data, start_angle, max_len)
+
+        return [[k,] for k in self.make_clusters(data)]
 
     def sector_to_lines_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
         '''Преобразует данные сектора в кластеры линий
             Возвращаеть лист листов Vec2d
         '''
         res = []
-        for cluster in self.make_clusters(self.sector_to_points(data, start_angle, max_len)):
+
+        #преобразуем сектор в лист точек
+        if isinstance(data, dict):
+            data = self.sector_to_points(data, start_angle, max_len)
+
+        for cluster in self.make_clusters(data):
             #отсекаем кластеры меньше 5 точек.
             if len(cluster) < 5:
                 continue

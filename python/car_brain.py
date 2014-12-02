@@ -92,7 +92,8 @@ class CarBrain(Thread):
             data = client.ik_get_sector(1)[0]
 
             #1. найдём кластеры точек
-            lines = self.lfm.clusters_to_lines(self.lfm.sector_to_lines_clusters(data))
+            points = self.lfm.sector_to_points(data, start_angle=math.pi/2.0, max_len=1000)
+            lines = self.lfm.clusters_to_lines(self.lfm.sector_to_lines_clusters(points))
 
             #2. анализ расстояния между кластерами
             if len(lines) > 1:
@@ -132,7 +133,8 @@ class CarBrain(Thread):
 
                 #Отправим в отображалку
                 if USE_GUI:
-                    primitives = [{"line": l, "color": (0, 255, 0)} for l in lines]
+                    primitives = [{"line": l, "color": (0, 255, 0), "text": str(i)} for i, l in enumerate(lines)]
+                    primitives.append({"points": points, "color": (0, 255, 0), "size": 3})
 
                     if len(holes):
                         primitives.append({"line": holes[0], "color":(255, 0, 0)})

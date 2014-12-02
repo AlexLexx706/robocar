@@ -267,6 +267,19 @@ class LidarFrame(QtGui.QFrame):
         if "color" in info:
             line.setPen(color=info["color"])
 
+        #Вместе с текстом
+        if "text" in info:
+            if "color" in info["color"]:
+                text = pg.TextItem(info["text"], color=info["color"])
+            else:
+                text = pg.TextItem(info["text"])
+
+            text.setPos(info["line"]["pos"][0], info["line"]["pos"][1])
+            self.plot.addItem(text)
+
+
+
+
     def draw_text(self, info):
         '''
         Отображает текст в формате:{
