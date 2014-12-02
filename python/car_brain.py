@@ -13,13 +13,14 @@ import logging
 USE_GUI = True
 
 class CarBrain(Thread):
-    def __init__(self, protocol_url=(1, {"host":"192.168.0.91", "port":1111})):
+    def __init__(self, protocol_url=(1, {"host":"192.168.0.91", "port":1111}), lidar_url=("192.168.0.91", 8080)):
         Thread.__init__(self)
 
         self.res_queue = Queue()
         self.protocol = Protocol(self.res_queue)
         self.lfm = LineFeaturesMaker()
         self.protocol_url = protocol_url
+        self.lidar_url = lidar_url
 
         #поток чтения сообщений из машины
         self.rpm_thread = Thread(target=self.rpm_proc)
@@ -35,8 +36,9 @@ class CarBrain(Thread):
             return self.hole
     
     def start(self):
-        if self.protocol.connect(*self.protocol_url):
-            print "Connected to: {}".format(self.protocol_url)
+        #if self.protocol.connect(*self.protocol_url):
+        #    print "Connected to: {}".format(self.protocol_url)
+        if 1:
 
             #отображалка
             if USE_GUI:
@@ -50,6 +52,10 @@ class CarBrain(Thread):
             Thread.start(self)
 
     def run(self):
+        while not self.stop_flag:
+            time.sleep(1)
+        return
+
         #поток управления машиной.
         angle_speed = math.pi * 0.7
         self.protocol.set_pid_settings(0, 2, 0.2, 0.1)
@@ -80,15 +86,10 @@ class CarBrain(Thread):
                 pass
 
     def lidar_proc(self ):
-        url = ("192.168.0.91", 8080)
-        client = Client(url)
+        client = Client(self.lidar_url)
 
         while 1:
             data = client.ik_get_sector(1)[0]
-
-            #Для отображения
-            if USE_GUI:
-                self.data_queue_for_gui.put(data)
 
             #1. найдём кластеры точек
             lines = self.lfm.clusters_to_lines(self.lfm.sector_to_lines_clusters(data))
@@ -129,13 +130,25 @@ class CarBrain(Thread):
                 with self.hole_lock:
                     self.hole = holes[0] if len(holes) else None
 
+                #Отправим в отображалку
+                if USE_GUI:
+                    primitives = [{"line": l, "color": (0, 255, 0)} for l in lines]
+
+                    if len(holes):
+                        primitives.append({"line": holes[0], "color":(255, 0, 0)})
+
+                    self.data_queue_for_gui.put(primitives)
+
                #print len(holes),  " ".join(["({} {})".format(c["clasters"][0], c["clasters"][1]) for c in holes])
 
 
 if __name__ == "__main__":
     logging.getLogger("protocol").setLevel(50)
 
-    cb = CarBrain()
+    protocol_url = (1, {"host": "192.168.10.154", "port": 1111})
+    lidar_url = ("192.168.10.154", 8080)
+
+    cb = CarBrain(protocol_url, lidar_url)
     cb.start()
     cb.join()
         

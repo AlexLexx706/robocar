@@ -142,13 +142,13 @@ class LidarFrame(QtGui.QFrame):
             
             #чтение из очереди
             if self.in_gueue_sector_data is not None:
-                self.read_thread = threading.Thread(target=self.read_in_queue_proc)
+                self.read_thread = threading.Thread(target=self.read_queue_proc)
             else:
                 out_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
 
                 #запуск чтения с датчика
                 if self.groupBox_connection.isChecked():
-                    self.read_thread = threading.Thread(target=self.read_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
+                    self.read_thread = threading.Thread(target=self.read_server_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
                 #запуск из файла
                 else:
                     self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
@@ -175,7 +175,7 @@ class LidarFrame(QtGui.QFrame):
 
         self.lines_before = lines
 
-    def read_proc(self, url, out_file):
+    def read_server_proc(self, url, out_file):
         client = Client(url)
         
         #Создадим поток для записи данных
@@ -189,16 +189,7 @@ class LidarFrame(QtGui.QFrame):
             data = client.ik_get_sector(1)
 
             if data is not None:
-                data = data[0]
-                #clusters_list = self.lfm.sector_to_points_clusters(data)
-                #clusters_list = self.lfm.linearization_clusters_data(clusters_list)
-                clusters_list = self.lfm.sector_to_lines_clusters(data)
-                self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-                #lines = self.lfm.clusters_to_lines(clusters_list)
-                #clusters_list = self.lfm.linearization_clusters_data([[[Vec2d(-20, 100), Vec2d(-40, 1)]],])
-                #self.new_data.emit(clusters_list)
-                #self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-                #self.calcl_odometry(lines)
+                self.prepare_data(data[0])
 
                 #пишем поток.
                 if out_file is not None:
@@ -216,15 +207,7 @@ class LidarFrame(QtGui.QFrame):
         while not self.stop_flag:
             try:
                 data = stream.load()
-
-                clusters_list = self.lfm.sector_to_lines_clusters(data)
-                self.new_data.emit(clusters_list)
-                #lines = self.lfm.clusters_to_lines(clusters_list)
-                #self.lfm.get_distances(lines)
-                #self.calcl_odometry(lines)
-
-                #self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-                #time.sleep(0.5)
+                self.prepare_data(data)
                 self.next_event.wait()
                 self.next_event.clear()
             #конец файла
@@ -232,43 +215,86 @@ class LidarFrame(QtGui.QFrame):
                 stream = pickle.Unpickler(open(file_path, "rb"))
                 time.sleep(1)
 
-    def read_in_queue_proc(self):
+    def read_queue_proc(self):
         while not self.stop_flag:
             data = self.in_gueue_sector_data.get()
 
             if data is None:
                 return
 
-            clusters_list = self.lfm.sector_to_lines_clusters(data)
-            self.new_data.emit(self.lfm.linearization_clusters_data(clusters_list))
-            #clusters_list = self.lfm.sector_to_points_clusters(data)
-            #clusters_list = self.lfm.linearization_clusters_data(clusters_list)
-            #clusters_list = self.lfm.linearization_clusters_data([[[Vec2d(-20, 100), Vec2d(-40, 1)]],])
-            #self.new_data.emit(clusters_list)
-                
-    def draw_data(self, data, color=(0, 255, 0, 255)):
-       if data is not None:
-            spi = pg.ScatterPlotItem(size=2, pen=pg.mkPen(None), brush=pg.mkBrush(color))
-            self.plot.addItem(spi)
-            i = 0
+            self.new_data.emit(data)
 
-            for cluster in data:
-                for c in cluster:
-                    spi.addPoints(pos=c)
 
-                    text = pg.TextItem(text=str(i), color=color)
-                    self.plot.addItem(text)
-                    text.setPos(c[0][0], c[0][1])
-                    i += 1
+    def prepare_data(self, data):
+        clusters = self.lfm.sector_to_points_clusters(data)
+        primetives = [{"points": p[0], "color":(255, 0, 0), "size":2} for p in clusters]
+        primetives.extend([{"text": str(i), "pos":p[0][0]} for i, p in enumerate(clusters)])
+        primetives.append({"line":{"pos": Vec2d(0,0), "end": Vec2d(100, 10)}, "color":(0,255, 0)})
+        primetives.append({"text":"Hi", "pos":[-20, 10]})
 
-            self.plot.showGrid(x=True, y=True)
+        self.new_data.emit(primetives)
+
+    def draw_points(self, info):
+        '''
+        Отображает точки, в формате:{
+            "points": [Vec2d,...],
+            "color":(r,g,b,a), - опционально
+            "size": int - опционально
+        }
+        '''
+        spi = pg.ScatterPlotItem()
+        spi.setData(pos=info["points"])
+
+        if "size" in info:
+            spi.setSize(info["size"])
+
+        if "color" in info:
+            spi.setBrush(pg.mkBrush(info["color"]))
+
+        self.plot.addItem(spi)
+
+    def draw_line(self, info):
+        '''
+        Отображает точки, в формате:{
+            "line":{"pos": Vec2d, "end": Vec2d}
+            "color": (r,g,b,a) - опционально
+        }
+        '''
+
+        line = self.plot.plot([{"x": info["line"]["pos"][0], "y":info["line"]["pos"][1]},
+                        {"x": info["line"]["end"][0], "y":info["line"]["end"][1]}])
+
+        if "color" in info:
+            line.setPen(color=info["color"])
+
+    def draw_text(self, info):
+        '''
+        Отображает текст в формате:{
+            "text":"",
+            "pos":[x,y]
+            "color": (r,g,b,a) - опционально
+        }
+        '''
+
+        if "color" in info:
+            text = pg.TextItem(info["text"], color=info["color"])
+        else:
+            text = pg.TextItem(info["text"])
+
+        text.setPos(info["pos"][0], info["pos"][1])
+        self.plot.addItem(text)
 
     def on_new_data(self, data):
         self.plot.clear()
-        #self.draw_data(self.data_before, (0, 255, 0, 255))
-        self.draw_data(data, (255, 0, 0, 255))
-        self.data_before = data
-        self.plot.plot([{"x": 0, "y": 0},{"x": 100, "y": 10}])
+
+        #рисуем новые данные
+        for p in data:
+            if "points" in p:
+                self.draw_points(p)
+            elif "line" in p:
+                self.draw_line(p)
+            elif "text" in p:
+                self.draw_text(p)
 
         if self.first_draw:
             self.plot.autoRange()
