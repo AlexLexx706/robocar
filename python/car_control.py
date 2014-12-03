@@ -524,6 +524,7 @@ lidar_points = None
 lidar_lines = None
 lidar_cluster_list = None
 
+
 @pu.functionThreader
 def lidar_worker():
 	global Lf, Lr, s, lidar_data, lidar_data_queue, lidar_lines, lidar_cluster_list, lidar_points
@@ -543,7 +544,7 @@ def lidar_worker():
 			sensors = {}#{'ik_distance': measure_distance(x, y, -ORT), 'distance': measure_distance(x, y, 0), 'height': measure_distance(x, y, 0)}
 #			data = [{'values': [rnd.randrange(50, 550) for i in range(360)]}]
 			try:
-				time.sleep(.1)
+				time.sleep(.3)
 				data = [stream.load()]
 			except EOFError:
 				return

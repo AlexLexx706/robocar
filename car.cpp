@@ -90,7 +90,7 @@ void Car::update()
     us_int1.update();
 
     //вещаем состояние.
-    if (info_period.isReady()){
+    if (info_period.is_ready()){
         EmitState();
     }
     

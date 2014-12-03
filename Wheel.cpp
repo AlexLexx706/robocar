@@ -63,7 +63,7 @@ void Wheel::update()
     if ( speed_control )
     {  
         pid.Compute();
-        if (info_period.isReady()){
+        if (info_period.is_ready()){
             Serial.print("a_s:"); Serial.print(abs_speed);
             Serial.print(" c_s:"); Serial.print(speed);
             Serial.print(" error:");
