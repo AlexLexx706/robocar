@@ -162,7 +162,7 @@ class LineFeaturesMaker:
         return Vec2d(dx, dy)
 
 
-    def sector_to_points(self, data, start_angle=0, max_len=1000):
+    def sector_to_points(self, data, start_angle=math.pi/2.0, max_len=1000):
         '''Преобразует сектор в точки
             Возвращает лист точек
         '''

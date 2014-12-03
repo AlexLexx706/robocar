@@ -36,9 +36,8 @@ class CarBrain(Thread):
             return self.hole
     
     def start(self):
-        #if self.protocol.connect(*self.protocol_url):
-        #    print "Connected to: {}".format(self.protocol_url)
-        if 1:
+        if self.protocol.connect(*self.protocol_url):
+            print "Connected to: {}".format(self.protocol_url)
 
             #отображалка
             if USE_GUI:
@@ -52,10 +51,6 @@ class CarBrain(Thread):
             Thread.start(self)
 
     def run(self):
-        while not self.stop_flag:
-            time.sleep(1)
-        return
-
         #поток управления машиной.
         angle_speed = math.pi * 0.7
         self.protocol.set_pid_settings(0, 2, 0.2, 0.1)
@@ -73,6 +68,7 @@ class CarBrain(Thread):
                     print "Turn 90!!!"
                     self.protocol.turn(math.pi / 2.0, angle_speed, True)
             time.sleep(0.5)
+            self.protocol.set_offset(0.4)
 
     def rpm_proc(self):
         while 1:
@@ -145,7 +141,8 @@ class CarBrain(Thread):
 
 
 if __name__ == "__main__":
-    logging.getLogger("protocol").setLevel(50)
+    #logging.getLogger("protocol").setLevel(50)
+    logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s%(message)s', level=logging.DEBUG)
 
     protocol_url = (1, {"host": "192.168.10.154", "port": 1111})
     lidar_url = ("192.168.10.154", 8080)

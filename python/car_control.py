@@ -292,10 +292,19 @@ def turn_to(a, async):
 
 sign = lambda a: 1.*a/abs(a) if a !=0 else 1
 def set_direction_move(x, y, a, async=True):
-		global Af
+		global Af, lidar_points
 
 #		yaw_pwm = proportional_control(Af, a, Pyaw, STABLE_YAW)
 #				control_copter(yaw=(1+sign(Af-a)*Myaw)*STABLE_YAW)
+
+		if VISUALIZE_LIDAR:
+			b = a+pi/2
+			pnts = {"points": lidar_points, "color": (0, 255, 0), "size": 3}
+
+			dl = 400
+			direction = {"line": {'pos':(0,0), 'end':(dl*cos(b), dl*sin(b))}, "color":(255, 0, 0)}
+			lidar_data_queue.put([pnts, direction])
+
 		turn_to(a, async)
 		output_states()
 				
@@ -493,12 +502,13 @@ def get_average_sector(data, angle_deg, sector_deg):
 LOCK = pu.threading.Lock()
 
 lidar_data = None
+lidar_points = None
 lidar_lines = None
 lidar_cluster_list = None
 
 @pu.functionThreader
 def lidar_worker():
-	global Lf, Lr, s, lidar_data, lidar_data_queue, lidar_lines, lidar_cluster_list
+	global Lf, Lr, s, lidar_data, lidar_data_queue, lidar_lines, lidar_cluster_list, lidar_points
 
 	while True:
 		data = None
@@ -512,12 +522,10 @@ def lidar_worker():
 		with LOCK:
 			lidar_data = data[0]
 
-		if VISUALIZE_LIDAR:
-			lidar_data_queue.put(lidar_data)
-
 #		STATES['max_dist'] = 'lidar points max: %d'%max((p.get_length() for p in points))
 		with LOCK:
-			cluster_list = [lfm.split_and_merge_cluster(cl) for l in lfm.sector_to_points_clusters(lidar_data) for cl in l if 5<=len(cl)]
+			lidar_points = lfm.sector_to_points(lidar_data)
+			cluster_list = [lfm.split_and_merge_cluster(cl) for l in lfm.sector_to_points_clusters(lidar_points) for cl in l if 5<=len(cl)]
 			lidar_cluster_list = []
 			for l in cluster_list:
 				for cl in l:
@@ -574,10 +582,10 @@ def get_nearest_point_dir(flt=lambda x: True, index_range=None):
 		values = list(lidar_data['values'])
 #		values.reverse()
 
-		print 'values len:', len(values)#, 'points:', lidar_points
+#		print 'values len:', len(values)#, 'points:', lidar_points
 		lidar_points = [values[i] for i in range(*index_range)] if index_range!=None else values
 
-	print 'lidar_points len:', len(lidar_points)#, 'points:', lidar_points
+#	print 'lidar_points len:', len(lidar_points)#, 'points:', lidar_points
 	flt_points = filter(flt, lidar_points)
 
 	min_dist = min(flt_points)
@@ -585,7 +593,7 @@ def get_nearest_point_dir(flt=lambda x: True, index_range=None):
 	angle = radians(flt_points.index(min_dist)+index_range[0])+pi/2
 #	pdb.set_trace()
 
-	print 'min_dist:', min_dist, 'angle:', angle
+#	print 'min_dist:', min_dist, 'angle:', angle
 	return min_dist, angle
 
 
@@ -712,7 +720,7 @@ def right_wall_motion(x, y):
 
 def perspective_motion(x, y):
 #	import lidar
-
+#	CAR_CONTROLLER.set_offset(MOTION_SPEED)
 	time.sleep(MAIN_CYCLE_SLEEP)
 	
 	STATES['turning'] = ''
@@ -726,18 +734,17 @@ def perspective_motion(x, y):
 		return 0<xa and xa<pi
 
 #	mdd = get_nearest_line_dir(line_angle_filter)
-	mdd = get_nearest_point_dir(index_range=(-89,90))
 
-	if mdd != None:
-		dist, anti_norm_angle = mdd
-		metric_dist = lidar_dist_to_metrics(dist)
-		if anti_norm_angle!=None and metric_dist<delta:
-			wall_ctrl_angle = xy_angle_to_control(anti_norm_angle)
-			set_control_state("Too close (%1.2f) to point @angle %1.2f. Moving away"%(metric_dist, wall_ctrl_angle))
-#			return set_direction_move(x, y, wall_ctrl_angle+pi)
 
-#			angle = norm.get_angle()
-			return set_direction_move(x, y, (anti_norm_angle%pi)*2, True)
+#	mdd = get_nearest_point_dir(index_range=(-89,90))
+#	if mdd != None:
+#		dist, anti_norm_angle = mdd
+#		metric_dist = lidar_dist_to_metrics(dist)
+#		if anti_norm_angle!=None and metric_dist<delta:
+#			wall_ctrl_angle = xy_angle_to_control(anti_norm_angle)
+#			set_control_state("Too close (%1.2f) to point @angle %1.2f. Moving away"%(metric_dist, wall_ctrl_angle))
+#			return set_direction_move(x, y, (anti_norm_angle%pi)*2, True)
+
 #			return set_direction_move(x, y, (anti_norm_angle%pi)*2, False)
 
 	res_angle = None
