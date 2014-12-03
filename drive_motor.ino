@@ -43,9 +43,9 @@ void loop()
 {
     if (giro_period.is_ready()){
         giro.update(giro_period.get_dt());
-        car.giro_angles[0] = giro.giro_angles[0];
+        car.giro_angles[0] = -giro.giro_angles[2];
         car.giro_angles[1] = giro.giro_angles[1];
-        car.giro_angles[2] = giro.giro_angles[2];
+        car.giro_angles[2] = giro.giro_angles[0];
 
         car.acell[0] = giro.ax;
         car.acell[1] = giro.ay;

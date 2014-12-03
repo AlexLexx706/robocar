@@ -256,13 +256,14 @@ class LidarFrame(QtGui.QFrame):
         primetives = [{"points": points, "color":(255, 0, 0), "size": 2}, ]
 
         #2. найдём кластеры линий.
-        clasters = self.lfm.sector_to_lines_clusters(points)
+        if 0:
+            clasters = self.lfm.sector_to_lines_clusters(points)
 
-        i = 0
-        for c_l in clasters:
-            for c in c_l:
-                primetives.append({"line": self.lfm.point_to_line_sqr_approx(c), "color":(0, 255, 0), "text": str(i), "width":3})
-                i += 1
+            i = 0
+            for c_l in clasters:
+                for c in c_l:
+                    primetives.append({"line": self.lfm.point_to_line_sqr_approx(c), "color":(0, 255, 0), "text": str(i), "width":3})
+                    i += 1
 
         draw_data = {"frame_number": self.frame_number,
                      "primetives": primetives}

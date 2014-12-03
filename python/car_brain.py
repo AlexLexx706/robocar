@@ -79,11 +79,6 @@ class CarBrain(Thread):
     def run(self):
         try:
             logger.debug("->")
-            
-            #while not self.stop_flag:
-            #    time.sleep(1)
-            #return
-
             #поток управления машиной.
             angle_speed = math.pi * 0.4
             time.sleep(5)
