@@ -22,7 +22,7 @@ class LidarFrame(QtGui.QFrame):
     
     def __init__(self, settings, parent=None, in_gueue_sector_data = None):
         super(QtGui.QFrame, self).__init__(parent)
-        uic.loadUi("LidarFrame.ui", self)
+        uic.loadUi(os.path.join(os.path.split(__file__)[0], "LidarFrame.ui"), self)
         self.settings = settings
                 
         self.view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
@@ -34,6 +34,7 @@ class LidarFrame(QtGui.QFrame):
         
         self.groupBox_connection.setChecked(self.settings.value("lidar_use_connection", True).toBool())
         self.checkBox_record.setChecked(self.settings.value("lidar_record", False).toBool())
+        self.groupBox_use_step.setChecked(self.settings.value("lidar_use_step", False).toBool())
 
         ## create four areas to add plots
         self.plot = self.view.addPlot()
@@ -51,11 +52,19 @@ class LidarFrame(QtGui.QFrame):
         self.next_event = threading.Event()
         self.in_gueue_sector_data = in_gueue_sector_data
         self.first_draw = True
+        self.label_frame.setText("0")
+        self.frame_number = 0
         
         if self.in_gueue_sector_data is not None:
-            print "!!!!!!!!!!!"
             self.start()
-    
+
+    @pyqtSlot(bool)
+    def on_groupBox_use_step_clicked(self, checked):
+        if not checked:
+            self.next_event.set()
+
+        self.settings.setValue("lidar_use_step", checked)
+
     def start_video(self):
         if self.video_thread is None:
             self.reader = FFmpegReader()
@@ -115,10 +124,8 @@ class LidarFrame(QtGui.QFrame):
     @pyqtSlot(bool)
     def on_pushButton_control_clicked(self, v):
         if self.stop_flag:
-            self.pushButton_control.setText(u"Стоп")
             self.start()
         else:
-            self.pushButton_control.setText(u"Старт")
             self.stop()
 
     @pyqtSlot(bool)
@@ -139,6 +146,7 @@ class LidarFrame(QtGui.QFrame):
         if self.stop_flag:
             self.stop_flag = False
             self.first_draw = True
+            self.frame_number = 0
             
             #чтение из очереди
             if self.in_gueue_sector_data is not None:
@@ -152,17 +160,15 @@ class LidarFrame(QtGui.QFrame):
                 #запуск из файла
                 else:
                     self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
-
+            self.pushButton_control.setText(u"Стоп")
             self.read_thread.start()
     
     def stop(self):
         if not self.stop_flag:
-            if self.in_gueue_sector_data is not None:
-                self.in_gueue_sector_data.put(None)
-
             self.stop_flag = True
             self.next_event.set()
             self.read_thread.join()
+            self.pushButton_control.setText(u"Старт")
 
     def calcl_odometry(self, lines):
         return
@@ -174,6 +180,13 @@ class LidarFrame(QtGui.QFrame):
             #print self.odometry_angle
 
         self.lines_before = lines
+
+    def wait_next_step(self):
+        if self.groupBox_use_step.isChecked():
+            self.next_event.wait()
+            self.next_event.clear()
+            return True
+        return False
 
     def read_server_proc(self, url, out_file):
         client = Client(url)
@@ -195,6 +208,8 @@ class LidarFrame(QtGui.QFrame):
                 if out_file is not None:
                     out_file.dump(data)
 
+                self.wait_next_step()
+
     def read_file_proc(self, file_path):
         if not os.path.exists(file_path):
             return
@@ -208,8 +223,8 @@ class LidarFrame(QtGui.QFrame):
             try:
                 data = stream.load()
                 self.prepare_data(data)
-                self.next_event.wait()
-                self.next_event.clear()
+                if not self.wait_next_step():
+                    time.sleep(0.25)
             #конец файла
             except EOFError:
                 stream = pickle.Unpickler(open(file_path, "rb"))
@@ -217,22 +232,43 @@ class LidarFrame(QtGui.QFrame):
 
     def read_queue_proc(self):
         while not self.stop_flag:
-            data = self.in_gueue_sector_data.get()
+            try:
+                self.wait_next_step()
+                data = self.in_gueue_sector_data.get(timeout=1)
+            except Queue.Empty:
+                continue
 
             if data is None:
                 return
 
-            self.new_data.emit(data)
+            draw_data = {"frame_number": self.frame_number,
+                         "primetives": data}
+            self.frame_number += 1
+
+            print 'read_queue_proc'
+            self.new_data.emit(draw_data)
 
 
     def prepare_data(self, data):
-        clusters = self.lfm.sector_to_points_clusters(data)
-        primetives = [{"points": p[0], "color":(255, 0, 0), "size":2} for p in clusters]
-        primetives.extend([{"text": str(i), "pos":p[0][0]} for i, p in enumerate(clusters)])
-        primetives.append({"line":{"pos": Vec2d(0,0), "end": Vec2d(100, 10)}, "color":(0,255, 0)})
-        primetives.append({"text":"Hi", "pos":[-20, 10]})
+        points = self.lfm.sector_to_points(data)
 
-        self.new_data.emit(primetives)
+        #1. Отобразим точки
+        primetives = [{"points": points, "color":(255, 0, 0), "size": 2}, ]
+
+        #2. найдём кластеры линий.
+        clasters = self.lfm.sector_to_lines_clusters(points)
+
+        i = 0
+        for c_l in clasters:
+            for c in c_l:
+                primetives.append({"line": self.lfm.point_to_line_sqr_approx(c), "color":(0, 255, 0), "text": str(i), "width":3})
+                i += 1
+
+        draw_data = {"frame_number": self.frame_number,
+                     "primetives": primetives}
+
+        self.frame_number += 1
+        self.new_data.emit(draw_data)
 
     def draw_points(self, info):
         '''
@@ -257,15 +293,19 @@ class LidarFrame(QtGui.QFrame):
         '''
         Отображает точки, в формате:{
             "line":{"pos": Vec2d, "end": Vec2d}
-            "color": (r,g,b,a) - опционально
+            "color": (r,g,b,a) - опционально,
+            "width":int - опционально, толщина линии
         }
         '''
 
         line = self.plot.plot([{"x": info["line"]["pos"][0], "y":info["line"]["pos"][1]},
                         {"x": info["line"]["end"][0], "y":info["line"]["end"][1]}])
 
-        if "color" in info:
-            line.setPen(color=info["color"])
+        if "color" in info :
+            if "width" in info:
+                line.setPen(color=info["color"], width=info["width"])
+            else:
+                line.setPen(color=info["color"])
 
         #Вместе с текстом
         if "text" in info:
@@ -299,9 +339,10 @@ class LidarFrame(QtGui.QFrame):
 
     def on_new_data(self, data):
         self.plot.clear()
+        self.label_frame.setText(str(data["frame_number"]))
 
         #рисуем новые данные
-        for p in data:
+        for p in data["primetives"]:
             if "points" in p:
                 self.draw_points(p)
             elif "line" in p:

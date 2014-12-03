@@ -12,4 +12,4 @@ if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     widget = MainWindow()
     widget.show()
-    sys.exit(app.exec_())  
+    sys.exit(app.exec_())

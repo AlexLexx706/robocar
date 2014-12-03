@@ -182,11 +182,12 @@ class Protocol:
         #
         '''
         try:
-            logger.debug("(angle:{} angle_speed:{})->".format(angle, angle_speed))
-            
             #нельзя поворачивать на нуливой угол
             if angle == 0.0:
                 return 0.0
+            
+            logger.debug("(angle:{} angle_speed:{})->".format(angle, angle_speed))
+                
 
             if self.serial is not None:
                 with self.sa_condition:

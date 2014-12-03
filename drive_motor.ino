@@ -45,8 +45,6 @@ void update_dmp6()
     
     // wait for MPU interrupt or extra packet(s) available
     //while (!mpuInterrupt && fifoCount < packetSize){}
-    //Serial.print("I: ");
-    //Serial.println(mpuInterrupt);
 
     // reset interrupt flag and get INT_STATUS byte
     mpuInterrupt = false;
@@ -94,7 +92,9 @@ void setup()
     Wire.begin();
     TWBR = 24; // 400kHz I2C clock (200kHz if CPU is 8MHz)
     mpu.initialize();
+    Serial.println("mpu.initialize()"); 
     mpu.testConnection();
+    Serial.println("mpu.testConnection();"); 
     uint8_t devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -102,6 +102,7 @@ void setup()
     mpu.setYGyroOffset(76);
     mpu.setZGyroOffset(-85);
     mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+    Serial.println("mpu.setZAccelOffset();"); 
 
     // make sure it worked (returns 0 if so)
     if (devStatus == 0)

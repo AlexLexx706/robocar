@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+#from sklearn.cluster._hierarchical import max_merge
+
 __author__ = 'AlexLexx'
 
 import math
@@ -61,27 +63,28 @@ class LineFeaturesMaker:
                     clusters[i].append(e_p)
         return clusters_list
 
-        
+    def pair_points_to_line(self, p1, p2):
+        """Преобразует пару точек в описание линии"""
+        d = (p2 - p1)
+        l = d.normalize_return_length()
+        n = d.perpendicular()
+        center = p1 + d * l / 2.0
+        distance = center.get_length()
+        return {"pos": p1,
+                      "end": p2,
+                      "dir": d,
+                      "normal": n,
+                      "length": l,
+                      "center": center,
+                      "distance": distance}
+
     def clusters_to_lines(self, clusters_list):
         '''Преобразует список кластеров в линии (start, stop, direction, normal)'''
         lines = []
 
         for clusters in clusters_list:
             for cluster in clusters:
-                p1 = Vec2d(cluster[0])
-                p2 = Vec2d(cluster[-1])
-                d = (p2 - p1)
-                l = d.normalize_return_length()
-                n = d.perpendicular()
-                center = p1 + d * l / 2.0
-                distance = center.get_length()
-                lines.append({"pos": p1,
-                              "end": p2,
-                              "dir": d,
-                              "normal": n,
-                              "length": l,
-                              "center": center,
-                              "distance": distance})
+                lines.append(self.pair_points_to_line(Vec2d(cluster[0]), Vec2d(cluster[-1])))
         return lines
 
     def search_similar(self, before_lines_frame, cur_lines_frame, max_angle=10., max_distance=10):
@@ -243,7 +246,7 @@ class LineFeaturesMaker:
         def merge(clusters):
             '''Обьединим соседние линии в одну если угол наклона не оч большой'''
             if len(clusters) > 1:
-                threshold = 8
+                threshold = 3
 
                 first = clusters[0]
                 i = 1
@@ -273,3 +276,91 @@ class LineFeaturesMaker:
         split(cluster, res)
         merge(res)
         return res
+
+    def point_to_line_sqr_approx(self, points):
+        '''
+        Содаёт прямую по точкам методом наименьших квадратов
+        '''
+
+        if len(points) < 2:
+            raise RuntimeError("len(points) < 2")
+
+        #1. рассчёт коэффициентов уравнения прямой. y = ax + b
+        #                                           x = (y - b)/a
+        sx = 0
+        sxx = 0
+        sy = 0
+        sxy = 0
+
+        for p in points:
+            sx = sx + p[0]
+            sy = sy + p[1]
+            sxx = sxx + p[0] * p[0]
+            sxy = sxy + p[0] * p[1]
+
+        d = float(sx * sx - sxx * len(points))
+
+        #вертикаль.
+        if d == 0:
+            x = points[0][0]
+            min_y = points[0][1]
+            max_y = min_y
+
+            for p in points[1:]:
+                x += p[0]
+
+                if p[1] < min_y:
+                    min_y = p[1]
+
+                if p[1] > max_y:
+                    max_y = p[1]
+
+            return self.pair_points_to_line(Vec2d(x, min_y), Vec2d(x, max_y))
+        #всё остальное.
+        else:
+            da = sy * sx - len(points) * sxy
+            db = sx * sxy - sxx * sy
+            a = da / d
+            b = db / d
+
+            #линия почти горизонтальная
+            if abs(a) < 1.0:
+                start_point = Vec2d(0.0, a * 0.0 + b)
+                end_point = Vec2d(100.0, a * 100.0 + b)
+            #линия почти вертикальная
+            else:
+                start_point = Vec2d((0.0 - b) / a, 0.0)
+                end_point = Vec2d((100.0 - b) / a, 100.0)
+
+            norm_dir = (end_point - start_point).normalized()
+            perpendicular_norm = norm_dir.perpendicular()
+
+            min = norm_dir.dot((Vec2d(points[0]) - start_point))
+            s_value = min
+            max = min
+            wnd_ok = True
+
+            #найдём проверка условия апроксимации и поиск минимума и максимума
+            for p in points[1:]:
+                vector = p - start_point
+                v = norm_dir.dot(vector)
+                h = abs(perpendicular_norm.dot(vector))
+
+                ##проверка условия апроксимации линией
+                #if h > self.wnd:
+                #    return None
+
+                if v < min:
+                    min = v
+                elif v > max:
+                    max = v
+
+            #начало и конец
+            if abs(s_value - min) < abs(s_value - max):
+                sp = start_point + norm_dir * min
+                ep = start_point + norm_dir * max
+                return self.pair_points_to_line(sp, ep)
+            else:
+                sp = start_point + norm_dir * min
+                ep = start_point + norm_dir * max
+                return self.pair_points_to_line(ep, sp)
