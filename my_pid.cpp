@@ -12,41 +12,47 @@ ci(0),
 out_min(-1),
 out_max(1),
 first(true),
-dt(0.01),
-time_before(micros())
+period(10000)
 {
 }
 
-void PID::Compute() {
+void PID::Compute(float dt) {
     if (first) {
         prew_error = *error;
         first = false;
         ci = 0;
-        time_before = micros();
+        period.reset();
     }
-    
-    unsigned long cur_time = micros();
-    float cur_dt = (cur_time - time_before) / 1000000.;
 
-    if (cur_dt >= dt )
-    {
-        cur_dt = dt;
-        time_before = cur_time;
-        float de = *error - prew_error;
-        float cp = kp * (*error);
-        float cd = 0;
-        
-        ci += (*error) * cur_dt;
-        cd = de / cur_dt;
-        prew_error = *error;
-    
-        (*output) = cp + (ki * ci) + (kd * cd);
-    
-        if ((*output) < out_min)
-            (*output) = out_min;
-        else if ((*output) > out_max)
-            (*output) = out_max;
+    //Делаем проверка приращения.
+    if (dt == 0.0) {
+        if ( !period.is_ready() )
+            return;
+        dt = period.get_dt();
     }
+    
+    float de = *error - prew_error;
+    float cp = kp * (*error);
+    float cd = 0;
+
+    ci += (*error) * dt;
+    cd = de / dt;
+    prew_error = *error;
+
+    /*
+    Serial.print((*error)); Serial.print(" ");
+    Serial.print(de); Serial.print(" ");
+    Serial.print(cp); Serial.print(" ");
+    Serial.print(ci); Serial.print(" ");
+    Serial.println(cd);
+    */
+
+    (*output) = cp + (ki * ci) + (kd * cd);
+
+    if ((*output) < out_min)
+        (*output) = out_min;
+    else if ((*output) > out_max)
+        (*output) = out_max;
 }
 
 void PID::SetOutputLimits(float min, float max){

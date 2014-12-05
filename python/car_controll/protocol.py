@@ -6,13 +6,18 @@ import threading
 import time
 import socket
 from math import pi as PI
+
 logger = logging.getLogger(__name__)
+
+MIN_WRITE_DELAY = 0.03
 
 class TcpSerial:
     def __init__(self, host="192.168.0.91", port=1111):
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.s.connect((host, port))
         self.stop_flag = False
+        self.last_time = None
+        self.l_t = time.time()
         
         
     def read(self, size=1):
@@ -22,8 +27,14 @@ class TcpSerial:
         return data
 
     def write(self, data):
+        dt = time.time() - self.l_t
+        
+        #ждём немного
+        if dt < MIN_WRITE_DELAY:
+            time.sleep(MIN_WRITE_DELAY - dt)
         self.s.send(data)
-    
+        self.l_t = time.time()
+
     def close(self):
         self.stop_flag = True
         self.s.shutdown(socket.SHUT_RDWR)
@@ -122,6 +133,8 @@ class Protocol:
             self.serial = None
 
             try:
+                self.l_t = time.time()
+
                 if type == 0:
                     self.serial = serial.Serial(**settings)
                 else:
@@ -199,8 +212,14 @@ class Protocol:
                 if not no_wait:
                     with self.sa_condition:
                         while self.sa_res is None:
-                            self.sa_condition.wait()
-                        return self.sa_res
+                            self.sa_condition.wait(abs(angle/angle_speed) * 3.0)
+                            #self.sa_condition.wait(5)
+
+                            if self.sa_res is None:
+                                logger.error("turn not complete!!!")
+        
+                            logger.debug("res:{}".format(self.sa_res))
+                            return self.sa_res
         finally:
             logger.debug("<-")
 
@@ -251,7 +270,13 @@ class Protocol:
     def write(self, message):
         if self.serial is not None:
             try:
+                dt = time.time() - self.l_t
+                
+                #ждём немного
+                if dt < MIN_WRITE_DELAY:
+                    time.sleep(MIN_WRITE_DELAY - dt)
                 self.serial.write(message)
+                self.l_t = time.time()
             except serial.SerialException as e:
                 logger.error(str(e))
 

@@ -25,6 +25,8 @@ EMULATE_SENSORS = False
 CONTROL_MOVE_DIR = True
 #CONTROL_MOVE_DIR = False
 
+MOTION_DEBUG = True
+
 VISUALIZE_LIDAR = True
 #VISUALIZE_LIDAR = False
 
@@ -56,14 +58,19 @@ Ppitch = 10.
 Proll = -10.
 
 DEFAULT_WALL_ROUNDING_ANGLE_STEP = pi/8
-MOTION_SPEED = .4
+MOTION_SPEED = .5
 ITER_TURN_SPEED = .5*pi
 MIN_TURN_ANGLE = pi/36
 WALL_ROUNDING_ANGLE = 0
-MAIN_CYCLE_SLEEP = .5
+MAIN_CYCLE_SLEEP = .3 # .5
+WALL_ANALYSIS_ANGLE = 40
+WALL_ANALYSIS_DX_GAP = 15
 #WALL_ROUNDING_ANGLE = DEFAULT_WALL_ROUNDING_ANGLE_STEP
 
-delta = .6 # Базовое безопасное расстояние до стен
+ASYNC_TURNS = False
+#ASYNC_TURNS = True 
+
+delta = .5 # Базовое безопасное расстояние до стен
 Df = delta # Расстояние до передней стенки
 Dr = Df # Расстояние до правой стенки
 dr = 0.1 # Коридор расстояния до правой стенки (+/-)
@@ -178,7 +185,7 @@ def control_copter(pitch=NOP, roll=NOP, throttle=NOP, yaw=NOP):
 
 def proportional_control(sensor_value, desired_value, P, stable_pwm):
 	pwm = int((1+(desired_value-sensor_value)*P)*stable_pwm)
-	assert 1000<pwm and pwm<2000, 'PWM %d is out of range!'%pwm
+	assert 1000<pwm<2000, 'PWM %d is out of range!'%pwm
 	return pwm
 
 def move(x, y, a):
@@ -323,7 +330,17 @@ def set_direction_move(x, y, a, async=True):
 #			direction = {"line": {'pos':(0,0), 'end':(dl*cos(b), dl*sin(b))}, "color":(255, 0, 0)}
 #			lidar_data_queue.put([pnts, direction])
 
+		if MOTION_DEBUG:
+			time.sleep(.01)
+			CAR_CONTROLLER.set_offset(0)
+			time.sleep(.01)
+
 		turn_to(a, async)
+		if MOTION_DEBUG:
+			time.sleep(.01)
+			CAR_CONTROLLER.set_offset(MOTION_SPEED)
+			time.sleep(.2)
+
 		output_states()
 				
 #		Af = a
@@ -425,7 +442,7 @@ def lidar_data_visualize(queue):
 		main(queue)
 
 lidar_data_queue = None
-def control(rpi_host, iter_num=10000000, max_queue_size=1000):
+def control(rpi_host, iter_num=10000000, max_queue_size=None):
 	global s, lidar_data, lidar_data_queue
 #	from Queue import Queue
 
@@ -441,7 +458,11 @@ def control(rpi_host, iter_num=10000000, max_queue_size=1000):
 		lidar_data_visualize(lidar_data_queue)
 
 	loggers.logOut('Working...')
-	if THREAD_LIDAR_PROCESSING:
+	lidar_worker()
+	if THREAD_LIDAR_PROCESSING and not EMULATE_SENSORS:
+		pass
+#		pu.startThread(lidar_worker)
+	else:
 		lidar_worker()
 
 #	if not EMULATE_SENSORS:
@@ -509,7 +530,7 @@ def get_average_sector(data, angle_deg, sector_deg):
 	else:
 		sector_values = values[angle_deg-half_sect:angle_deg+half_sect]
 
-	sector_data = [l for l in sector_values if l<MAX_LIDAR_DISTANCE and MIN_LIDAR_DISTANCE<l]
+	sector_data = [l for l in sector_values if MIN_LIDAR_DISTANCE< l <MAX_LIDAR_DISTANCE]
 	if len(sector_data)==0:
 #			print 'Sector %d %d have no valid values!'%(angle_deg, sector_deg)
 		return lidar_dist_to_metrics(MAX_LIDAR_DISTANCE)
@@ -610,16 +631,17 @@ def get_nearest_point_dir(flt=lambda x: True, index_range=None):
 #	print 'lidar_data:', lidar_data
 
 	with LOCK:
-		values = list(lidar_data['values'])
-#		values.reverse()
+#		values = list(lidar_data['values'])
+		flt_values = filter(flt, enumerate(lidar_data['values']))
 
-#		print 'values len:', len(values)#, 'points:', lidar_points
-		lidar_points = [values[i] for i in range(*index_range)] if index_range!=None else values
+#	lidar_points = [flt_values[i] for i in range(*index_range)] if index_range!=None else flt_values
 
 #	print 'lidar_points len:', len(lidar_points)#, 'points:', lidar_points
-	flt_points = filter(flt, lidar_points)
 
-	min_dist = min(flt_points)
+	if len(flt_values)<1:
+		return	
+
+	min_dist = min(flt_values)
 	
 	angle = radians(flt_points.index(min_dist)+index_range[0])+pi/2
 #	pdb.set_trace()
@@ -740,7 +762,7 @@ def right_wall_motion(x, y):
 		return set_direction_move(x, y, Af+DEFAULT_WALL_ROUNDING_ANGLE_STEP)
 #		return move(x, y, Af+ORT)
 	
-	if Lf < Df and Dr-dr < Lr and Lr < Dr+dr:
+	if Lf < Df and Dr-dr < Lr < Dr+dr:
 		set_control_state("Turning Left. We are in the corner")
 		return set_direction_move(x, y, Af+ORT)
 					
@@ -751,22 +773,23 @@ def right_wall_motion(x, y):
 
 def perspective_motion(x, y):
 #	CAR_CONTROLLER.set_offset(MOTION_SPEED)
-	time.sleep(MAIN_CYCLE_SLEEP)
+	if 0<MAIN_CYCLE_SLEEP:
+		time.sleep(MAIN_CYCLE_SLEEP)
 	
 	STATES['turning'] = ''
 
 	def line_angle_filter(x):
 		xna = radians(x['normal'].get_angle())
-		return -pi<xna and xna<0
+		return -pi< xna <0
 
 	def point_angle_filter(x):
 		xa = radians(x.get_angle())
-		return 0<xa and xa<pi
+		return 0< xa <pi
 
 #	mdd = get_nearest_line_dir(line_angle_filter)
-
-
-	mdd = get_nearest_point_dir(index_range=(-10,10))
+	index_range = (-WALL_ANALYSIS_ANGLE, WALL_ANALYSIS_ANGLE)
+	motion_corridor = lambda d: (-WALL_ANALYSIS_DX_GAP< d[1]*cos(radians(d[0])) <WALL_ANALYSIS_DX_GAP) and d[0] in index_range
+	mdd = get_nearest_point_dir(motion_corridor)
 	if mdd != None:
 		dist, angle = mdd
 		angle = normalize_angle(angle)
@@ -775,13 +798,13 @@ def perspective_motion(x, y):
 			wall_ctrl_angle = xy_angle_to_control(angle)
 			set_control_state("Too close (%1.2f) to point @angle %1.2f. Moving away"%(metric_dist, wall_ctrl_angle))
 
-			ctrl_angle = (angle%pi)*2
+			ctrl_angle = wall_ctrl_angle+pi/4
 			da = pi/36
 			wall = {'pos':(dist*cos(angle-da), dist*sin(angle-da)), 
 							'end': (dist*cos(angle+da), dist*sin(angle+da))}
 
 			plot_data(dist, ctrl_angle+pi/2, {"line": wall, "color":(255, 0, 0), "width": 3})
-			return set_direction_move(x, y, ctrl_angle, True)
+			return set_direction_move(x, y, ctrl_angle, ASYNC_TURNS)
 
 #			return set_direction_move(x, y, (anti_norm_angle%pi)*2, False)
 
@@ -819,7 +842,7 @@ def perspective_motion(x, y):
 #		angle = radians(stop.get_angle_between(start)-start.get_angle())
 		angles_deg = (start.get_angle(), stop.get_angle())
 		angles = map(radians, angles_deg)
-		valid_angles = [angle for angle in angles if 0<=angle and angle<=pi]
+		valid_angles = [angle for angle in angles if 0<=angle<=pi]
 		if len(valid_angles)<1:
 #			print "No valid angles:", angles
 			continue
@@ -865,7 +888,7 @@ def perspective_motion(x, y):
         }
 		plot_data((selected_gap_start+selected_gap_vec/2).get_length(), res_angle, points)
 
-		return set_direction_move(x, y, control_angle)
+		return set_direction_move(x, y, control_angle, ASYNC_TURNS)
 	
 #	return move(x, y, Af)
 
@@ -893,14 +916,16 @@ loggers.configureRotatingFileLogger(sys.argv[1], minLogLevel=loggers.INFO, fileL
 
 #loggers.logging.getLogger("PyQt4").setLevel(logging.INFO)
 
-def connect(rpi_host):
-			CAR_CONTROLLER.connect(1, {"host": rpi_host, "port": 1111})
-			time.sleep(4)
+def connect(rpi_host, timout=2):
+	CAR_CONTROLLER.connect(1, {"host": rpi_host, "port": 1111})
+	loggers.logOut('Raspberry connected. Waiting for initialization %d seconds...'%timout)
+	time.sleep(timout)
+			
 
-def stop(rpi_host, connect=True):
+def stop(rpi_host, connect_rpi=True):
 
-		if connect:
-			connect(rpi_host)
+		if connect_rpi:
+			connect(rpi_host, 1)
 
 		loggers.logOut('Stopping car')
 		CAR_CONTROLLER.set_power_zerro()
@@ -915,7 +940,7 @@ def simulate(iter_num=10000):
 
 	EMULATE_SENSORS = True
 	CONTROL_MOVE_DIR = False
-	return control('', iter_num, 1)
+	return control('', iter_num, max_queue_size=1)
 
 
 if __name__ == "__main__":
@@ -927,7 +952,7 @@ if __name__ == "__main__":
 		func = eval(sys.argv[1])
 		loggers.logExc('Usage: %s'%func.__doc__)
 
-		stop('', connect=False)
+		stop('', connect_rpi=False)
 		while True and not EMULATE_MAV:
 			'Returning mavlink control to RC'
 			try:

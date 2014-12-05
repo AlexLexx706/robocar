@@ -94,17 +94,6 @@ void Car::update()
         EmitState();
     }
     
-//    if (debug){
-//        update_count++;
-//        
-//        if (update_period.isReady()){
-//            Serial.print("update_count: ");
-//            Serial.println(update_count);
-//            update_count = 0;
-//        }
-//    }
-    
-
     //алгоритм обхода препятствий.
     if ( enable_walk )
     {

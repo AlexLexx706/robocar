@@ -244,8 +244,6 @@ class LidarFrame(QtGui.QFrame):
             draw_data = {"frame_number": self.frame_number,
                          "primetives": data}
             self.frame_number += 1
-
-            print 'read_queue_proc'
             self.new_data.emit(draw_data)
 
 

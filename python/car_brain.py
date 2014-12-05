@@ -79,22 +79,27 @@ class CarBrain(Thread):
     def run(self):
         try:
             logger.debug("->")
+
+            #while not self.stop_flag:
+            #    time.sleep(1)
+            #return
+
             #поток управления машиной.
-            angle_speed = math.pi * 0.4
-            time.sleep(5)
+            angle_speed = math.pi * 0.3
+            time.sleep(3)
             self.protocol.set_pid_settings(0, 2, 0.2, 0.1)
-            self.protocol.set_offset(0.35)
+            self.protocol.set_info_period(1000000)
+            asinch = True
+            self.protocol.set_offset(0.5)
 
             while not self.stop_flag:
                 hole = self.get_hole()
+
                 if hole is not None:
-                    angle = -(90. - hole["angle"]) /180. * math.pi
-                    logger.debug("Turn angle:{}".format(angle))
-                    self.protocol.turn(angle, angle_speed, True)
+                    angle = -(90. - hole["angle"]) / 180. * math.pi
+                    self.protocol.turn(angle, angle_speed, asinch)
                 else:
-                    logger.debug("Turn 90!!!")
-                    self.protocol.turn(math.pi / 2.0, angle_speed, True)
-                
+                    self.protocol.turn(math.pi * 0.5, angle_speed, asinch)
                 time.sleep(0.25)
         finally:
             logger.debug("<-")
@@ -110,7 +115,9 @@ class CarBrain(Thread):
                     return 
 
                 if data[0] == 0:
-                    logger.debug(data[1])
+                    logger.info(data[1])
+                elif data[0] == 1:
+                    logger.info("giro:{:10.4f}".format(data[1][0]))
         finally:
             logger.debug("<-")
 
@@ -176,7 +183,7 @@ class CarBrain(Thread):
 
                     #Отправим в отображалку
                     if USE_GUI:
-                        primitives = [{"line": l, "color": (0, 255, 0), "text": str(i)} for i, l in enumerate(lines)]
+                        primitives = [] #[{"line": l, "color": (0, 255, 0), "text": str(i)} for i, l in enumerate(lines)]
                         primitives.append({"points": points, "color": (0, 255, 0), "size": 3})
 
                         if len(holes):
@@ -195,8 +202,9 @@ if __name__ == "__main__":
     protocol_url = (1, {"host": "192.168.0.91", "port": 1111})
     #protocol_url = (0, {"port": "com26", "baudrate":115200, "timeout":2, "writeTimeout":2})
     #protocol_url = (0, {"port": "/dev/ttyUSB0", "baudrate":115200, "timeout":2, "writeTimeout":2})
-    lidar_url = ("192.168.0.91", 8080)
+    #lidar_url = ("192.168.10.154", 8080)
     #lidar_url = ("localhost", 8080)
+    lidar_url = ("192.168.0.91", 8080)
     cb = CarBrain(protocol_url, lidar_url)
     cb.start()
     try:

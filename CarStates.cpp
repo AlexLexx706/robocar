@@ -132,14 +132,12 @@ TurnAngleState::TurnAngleState(Car & car, float _max_window,  float _min_window,
     power(0.f),
     myPID(&error, &power, 2, 0, 0.35),
     power_offset(0.),
-    dt(10000),
-    time_before(micros()),
     param_angle(0),
     cur_count(0),
     common_count(0),
     stable_window(0),
-    error_window(PI / 180.f * 10.f),
-    first(true)
+    first(true),
+    period(10000)
 {
     myPID.SetOutputLimits(-1, 1);
 }
@@ -165,7 +163,9 @@ void TurnAngleState::start(void * param)
     //возвратим результат установки угла если поворот не был завершон
     if (s_params->angle != 0.0){
         if (first == false && cur_count < common_count + stable_window) {
-            Serial.println("Reset complete");
+            if (car.debug) {
+                Serial.println("Reset complete");
+            }
             send_resp(get_error(car.giro_angles[0], start_angle));
         }
         first = false;
@@ -187,8 +187,8 @@ void TurnAngleState::start(void * param)
     float error = get_error(start_angle, dest_angle);
     float time = abs(error) / s_params->angle_speed;
     
-    if (error != 0.0 && time * 1000000 >= dt) {
-        common_count = (unsigned long)(time / (dt / 1000000.) );
+    if (error != 0.0 && time * 1000000 >= period.get_period()) {
+        common_count = (unsigned long)(time / (period.get_period() / 1000000.) );
         angle_step = error / common_count;
     }else{
         common_count = 0;
@@ -196,7 +196,6 @@ void TurnAngleState::start(void * param)
     }
 
     cur_count = 0; 
-    time_before = micros();
     car.wheel_left.set_power(0);
     car.wheel_right.set_power(0);
     State::start(param);
@@ -208,6 +207,9 @@ float TurnAngleState::get_error(float start, float end)
     float cur_direction[2] = {cos(start), sin(start)};
     float perp_direction[2] = {-cur_direction[1], cur_direction[0]};
     float angle = acos(ad_vo_scalprod(2, cur_direction, direction));
+
+    //проверка на нан, иногда бывает, непонятно почему :((
+    if (isnan(angle)) angle = 0.0;
 
     //поворот на право
     if (ad_vo_scalprod(2, perp_direction, direction) < 0)
@@ -227,19 +229,11 @@ State::ProcessState TurnAngleState::process()
 {
     if (!is_active)
         return Failed;
-
-    unsigned long cur_time = micros();
-    unsigned long cur_dt = cur_time - time_before;
-    
+   
     //ещё рано
-    if (cur_dt < dt)
+    if (!period.is_ready())
         return InProgress;
     
-    //откатим время
-    time_before = cur_time - cur_dt % dt;
-    
-    
-    if (cur_time - time_before )
     //рассчёт угла и направления поворота.
     cur_count++;
     float angle;
@@ -255,11 +249,14 @@ State::ProcessState TurnAngleState::process()
 
     //проверка завершения
     if (param_angle != 0.0 && cur_count == common_count + stable_window){
-        Serial.println("Good complete");
+        if (car.debug) {
+            Serial.println("Good complete");
+        }
         send_resp(get_error(car.giro_angles[0], start_angle));
     }
-    myPID.Compute();
-   
+
+    myPID.Compute(period.get_dt());
+
     if (power >= 0 )
     {
         car.wheel_left.set_power(-power + power_offset);

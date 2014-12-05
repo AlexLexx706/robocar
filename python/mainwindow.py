@@ -9,6 +9,9 @@ import math
 from robot_scene.robot_scene import RobotScene
 from LidarFrame import LidarFrame
 import Queue
+import random
+import time
+
 
 class MainWindow(QtGui.QMainWindow):
     KEY_A = 65
@@ -95,6 +98,25 @@ class MainWindow(QtGui.QMainWindow):
         self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
         self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
         self.lidar_frame.label_video.addAction(self.action_reset_camera)
+        
+        self.dos_stop_flag = True
+    
+    def dos_proc(self):
+        while not self.dos_stop_flag:
+            self.protocol.turn((random.random() * 2 - 1.0) * 2, no_wait=True)
+            self.protocol.set_offset(0.1)
+
+    @pyqtSlot(bool)
+    def on_pushButton_sart_dos_clicked(self, v):
+        if self.dos_stop_flag:
+            self.dos_stop_flag = False
+            self.dis_thread = threading.Thread(target=self.dos_proc)
+            self.dis_thread.start()
+            self.pushButton_sart_dos.setText(u"Остановить ДОС")
+        else:
+            self.dos_stop_flag = True
+            self.dis_thread.join()
+            self.pushButton_sart_dos.setText(u"Запустить ДОС")
 
     def read_protocol_res(self):
         while 1:
@@ -116,6 +138,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.settings.setValue("connection_type", t)
     
+   
     @pyqtSlot(bool)
     def on_action_clear_map_triggered(self, v):
         self.scene.clear_map()

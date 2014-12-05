@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>835</width>
-    <height>749</height>
+    <height>746</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -808,6 +808,13 @@
                    </property>
                    <property name="singleStep">
                     <double>0.010000000000000</double>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="pushButton_sart_dos">
+                   <property name="text">
+                    <string>Запустить ДОС</string>
                    </property>
                   </widget>
                  </item>

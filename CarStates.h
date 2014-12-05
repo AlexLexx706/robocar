@@ -2,6 +2,7 @@
 #define _CarState_H
 #include "my_pid.h"
 #include <Arduino.h>
+#include <period.h>
 
 class Car;
 class PID;
@@ -110,10 +111,8 @@ private:
     unsigned long cur_count;
     unsigned long common_count;
     unsigned long stable_window;
-    float error_window;
-    unsigned long dt;
-    unsigned long time_before;
     boolean first;
+    Period period;
     
     void send_resp(float angle);
 };

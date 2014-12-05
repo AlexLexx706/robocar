@@ -1,11 +1,12 @@
 #ifndef MY_PID_h
 #define MY_PID_h
-
+#include <Arduino.h>
+#include <period.h>
 class PID
 {
 public:
     PID(float * error, float * power, float p, float i, float d);
-    void Compute();
+    void Compute(float dt = 0.0);
     void SetOutputLimits(float min, float max);
     void SetTunings(float p, float i, float d);
     void Reset();
@@ -19,8 +20,7 @@ private:
     float ci;
     bool first;
     float out_min, out_max;
-    float dt;
-    unsigned long time_before;
+    Period period;
 };
 #endif
 
