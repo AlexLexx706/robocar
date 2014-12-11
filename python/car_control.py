@@ -1,10 +1,12 @@
 #!/usr/bin/python
 # coding: utf-8
 
+print 'Script begin'
+
 # Система управления
 import sys, time, collections as coll, pdb
 
-from math import sin, cos, pi, sqrt, radians
+from math import sin, cos, pi, sqrt, radians#, copysign
 import random as rnd
 #import numpy as np
 
@@ -16,6 +18,8 @@ import loggers
 import procUtils as pu
 from launcher import getTxtArgsCmd
 
+print 'Script imports passed'
+
 PROFILE = False
 #PROFILE = True
 
@@ -26,6 +30,7 @@ CONTROL_MOVE_DIR = True
 #CONTROL_MOVE_DIR = False
 
 MOTION_DEBUG = True
+MOTION_DEBUG = False
 
 VISUALIZE_LIDAR = True
 #VISUALIZE_LIDAR = False
@@ -35,8 +40,8 @@ EMULATE_MAV = True
 
 ARM_MOTORS = False
 
-THREAD_LIDAR_PROCESSING = False
-THREAD_LIDAR_PROCESSING = True
+#THREAD_LIDAR_PROCESSING = False
+#THREAD_LIDAR_PROCESSING = True
 
 USE_MATPLOTLIB = True
 USE_MATPLOTLIB = False
@@ -58,29 +63,35 @@ Ppitch = 10.
 Proll = -10.
 
 DEFAULT_WALL_ROUNDING_ANGLE_STEP = pi/8
-MOTION_SPEED = .5
+MOTION_SPEED = .8
+TURN_MOTION_SPEED = .4
+
+ITER_TURN_P = 1.4
+ITER_TURN_MAX_A = pi/2
 ITER_TURN_SPEED = .5*pi
+
 MIN_TURN_ANGLE = pi/36
 WALL_ROUNDING_ANGLE = 0
-MAIN_CYCLE_SLEEP = .3 # .5
-WALL_ANALYSIS_ANGLE = 40
+MAIN_CYCLE_SLEEP = .2
+WALL_ANALYSIS_ANGLE = 90
 WALL_ANALYSIS_DX_GAP = 15
 #WALL_ROUNDING_ANGLE = DEFAULT_WALL_ROUNDING_ANGLE_STEP
 
 ASYNC_TURNS = False
-#ASYNC_TURNS = True 
+ASYNC_TURNS = True 
 
-delta = .5 # Базовое безопасное расстояние до стен
-Df = delta # Расстояние до передней стенки
-Dr = Df # Расстояние до правой стенки
-dr = 0.1 # Коридор расстояния до правой стенки (+/-)
-Dh = .7 # Порог расстояния от центра маркера до нижней границы кадра (в долях 1)
+delta = 70 # Базовое безопасное расстояние до стен, в см
+#Df = delta # Расстояние до передней стенки, в метрах
+Dr = 30 # Расстояние до правой стенки, в см
+#dr = 0.1 # Коридор расстояния до правой стенки (+/-), в метрах
 da = .1 # Снижение высоты при подлёте к маркеру, в метрах
+Dh = .7 # Порог расстояния от центра маркера до нижней границы кадра (в долях 1)
 
-MIN_GAP_WIDTH = 100 # Минимальная ширина прохода в см
+MIN_GAP_WIDTH = 50 # Минимальная ширина прохода в см
 
 MIN_LIDAR_DISTANCE = 20 # Минимальное измеримое лидаром расстояние, в см
 MAX_LIDAR_DISTANCE = 600 # Максимальное измеримое лидаром расстояние, в см
+TRUSTABLE_LIDAR_DISTANCE = 400 # Максимальное достоверное измеримое лидаром расстояние, в см
 
 CONTROL_STATE = 'control'
 
@@ -259,7 +270,8 @@ def turn_to(a, async):
 		if CONTROL_MOVE_DIR and MIN_TURN_ANGLE<abs(control_angle):
 			loggers.logDbg('before CAR_CONTROLLER.turn')
 #			CAR_CONTROLLER.turn(control_angle, .7*pi, False)
-			turn_angle = CAR_CONTROLLER.turn(control_angle, ITER_TURN_SPEED, async)
+			turn_speed = ITER_TURN_P*MOTION_SPEED*ITER_TURN_SPEED*abs(control_angle)/ITER_TURN_MAX_A
+			turn_angle = CAR_CONTROLLER.turn(control_angle, turn_speed, async)
 #			time.sleep(1)
 			loggers.logDbg('after CAR_CONTROLLER.turn')
 
@@ -301,21 +313,39 @@ def plot_data(dir_dist, dir_ang, *extra_sprites):
 	if not VISUALIZE_LIDAR:
 		return
 
-#	global lidar_data_queuelidar_points
+	global lidar_data, lidar_points # _queuelidar_points
 
-	pnts = {"points": lidar_points, "color": (0, 255, 0), "size": 3}
-
-	direction = {"line": {'pos':(0,0), 'end': (dir_dist*cos(dir_ang), dir_dist*sin(dir_ang))}, "color":(0, 255, 0)}
-	primitives = [pnts, direction]
+	primitives = [{"line": {'pos':(0,0), 'end': (dir_dist*cos(dir_ang), dir_dist*sin(dir_ang))}, "color":(0, 255, 0)}]
 	if extra_sprites!=None:
 		primitives.extend(extra_sprites)
 
+	cl_max_cnt = len(lidar_cluster_list)/3*3
+
+#	cl_by_color = cl_max_cnt/3
+#	clr_block = 200/cl_by_color
+
+#	print 'cl_max_cnt:', cl_max_cnt
+#	print 'clr_block:', clr_block
+
+	from PyQt4 import QtCore, QtGui # .Qt import GlobalColor
+#	color_f = lambda ci, pos: 50+clr_block*(ci%(pos*cl_by_color/3))
+	for i, cl in enumerate(lidar_cluster_list):
+#		ci = 		
+#		color = QtGui.QColor(ci%20)
+		color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19))
+		rgb = color.getRgb()[:-1]
+#		print 'color:', rgb
+#		pdb.set_trace()
+
+		primitives.append({"points": cl, "color": rgb, "size": 2})
+
+#	primitives.append({"points": lidar_points, "color": (250, 125, 125), "size": 2})
 #	print primitives
 #	pdb.set_trace()
-	lidar_data_queue.put(primitives)
+#	lidar_data_queue.put({'primetives': primitives})
+	lidar_data_queue.put({'sector': lidar_data, 'primetives': primitives})
 
 
-sign = lambda a: 1.*a/abs(a) if a !=0 else 1
 def set_direction_move(x, y, a, async=True):
 		global Af, lidar_points
 
@@ -331,15 +361,13 @@ def set_direction_move(x, y, a, async=True):
 #			lidar_data_queue.put([pnts, direction])
 
 		if MOTION_DEBUG:
-			time.sleep(.01)
 			CAR_CONTROLLER.set_offset(0)
-			time.sleep(.01)
 
 		turn_to(a, async)
 		if MOTION_DEBUG:
-			time.sleep(.01)
+#			time.sleep(.01)
 			CAR_CONTROLLER.set_offset(MOTION_SPEED)
-			time.sleep(.2)
+#			time.sleep(.3)
 
 		output_states()
 				
@@ -446,34 +474,38 @@ def control(rpi_host, iter_num=10000000, max_queue_size=None):
 	global s, lidar_data, lidar_data_queue
 #	from Queue import Queue
 
-	if CONTROL_MOVE_DIR:
+	if CONTROL_MOVE_DIR and rpi_host:
 		connect(rpi_host)
 
 	if not EMULATE_SENSORS:
-		s = SensorsClient(rpi_host, 8080)
+		s = SensorsClient(rpi_host, 8080,  serialization="mesgpack")
 
 	if VISUALIZE_LIDAR:
 		lidar_data_queue = pu.md.Queue(max_queue_size)
-		print "lidar_data_queue: ", lidar_data_queue
+#		print "lidar_data_queue: ", lidar_data_queue
 		lidar_data_visualize(lidar_data_queue)
 
 	loggers.logOut('Working...')
-	lidar_worker()
-	if THREAD_LIDAR_PROCESSING and not EMULATE_SENSORS:
-		pass
-#		pu.startThread(lidar_worker)
+	if EMULATE_SENSORS:
+		global stream
+		import cPickle as pickle
+		stream = pickle.Unpickler(open(loggers.SCRIPT_FOLDER+'/data.dat', "rb"))
+		lines_before = None
 	else:
 		lidar_worker()
+		
+
 
 #	if not EMULATE_SENSORS:
 #		print 'Data:', data
 #		print 'Right wall distance: %1.2f'%get_average_sector(data, 90, 10)
 
-	# Waiting for the first lidar data
-	while lidar_data is None: pass
+	if not EMULATE_SENSORS:
+		# Waiting for the first lidar data
+		while lidar_data is None: pass
 
 	loggers.logDbg('Setting offset')
-	if 0<MOTION_SPEED:
+	if 0<MOTION_SPEED and CONTROL_MOVE_DIR:
 		CAR_CONTROLLER.set_offset(MOTION_SPEED)
 
 	if USE_MATPLOTLIB:
@@ -481,6 +513,9 @@ def control(rpi_host, iter_num=10000000, max_queue_size=None):
 		plt.show()
 	else:
 		for i in xrange(iter_num):
+			if EMULATE_SENSORS:
+				process_lidar_data()
+
 			get_next_coords(0,0)
 			output_states()	
 
@@ -544,52 +579,52 @@ lidar_data = None
 lidar_points = None
 lidar_lines = None
 lidar_cluster_list = None
+stream = None
+def process_lidar_data():
+	global s, lidar_data, lidar_data_queue, lidar_lines, lidar_cluster_list, lidar_points, stream
 
-
-@pu.functionThreader
-def lidar_worker():
-	global Lf, Lr, s, lidar_data, lidar_data_queue, lidar_lines, lidar_cluster_list, lidar_points
-
-	if EMULATE_SENSORS:
-		import cPickle as pickle
-		stream = pickle.Unpickler(open(loggers.SCRIPT_FOLDER+'/data.dat', "rb"))
-		lines_before = None
-		
-
-	while True:
-		data = None
-		if not EMULATE_SENSORS:
-			while data is None or len(data[0]['values'])!=360:
-				data = s.ik_get_sector(1)
-		else:
-			sensors = {}#{'ik_distance': measure_distance(x, y, -ORT), 'distance': measure_distance(x, y, 0), 'height': measure_distance(x, y, 0)}
+	data = None
+	if not EMULATE_SENSORS:
+		while data is None or len(data[0]['values'])!=360:
+			data = s.ik_get_sector(1)
+	else:
+		sensors = {}#{'ik_distance': measure_distance(x, y, -ORT), 'distance': measure_distance(x, y, 0), 'height': measure_distance(x, y, 0)}
 #			data = [{'values': [rnd.randrange(50, 550) for i in range(360)]}]
-			try:
-				time.sleep(.3)
-				data = [stream.load()]
-			except EOFError:
-				return
+		try:
+			data = [stream.load()]
+		except EOFError:
+			return
 
-		with LOCK:
-			lidar_data = data[0]
+	with LOCK:
+		lidar_data = data[0]
 
-#		STATES['max_dist'] = 'lidar points max: %d'%max((p.get_length() for p in points))
-		with LOCK:
-			lidar_points = lfm.sector_to_points(lidar_data)
-			cluster_list = [lfm.split_and_merge_cluster(cl) for l in lfm.sector_to_points_clusters(lidar_points) for cl in l]
-#			cluster_list = [lfm.split_and_merge_cluster(cl) for l in lfm.sector_to_points_clusters(lidar_points) for cl in l if 5<=len(cl)]
-			lidar_cluster_list = []
-			for l in cluster_list:
-				for cl in l:
-					lidar_cluster_list.extend(lfm.split_and_merge_cluster(cl))
+#		print 'lidar_data:', lidar_data
+		lidar_points = lfm.sector_to_points(lidar_data, max_radius=TRUSTABLE_LIDAR_DISTANCE)
+
+#	print 'lidar_points:', lidar_points
+		spc = lfm.sector_to_points_clusters(lidar_points)
+	
+#		cluster_list = [lfm.split_and_merge_cluster(cl) for l in spc for cl in l if 5<len(cl)]
+		lidar_cluster_list = [cl for l in spc for cl in l if 5<len(cl)]
+
+#	with LOCK:
+#		lidar_cluster_list = []
+#		for l in cluster_list:
+#			lidar_cluster_list.extend(l)
 
 #			STATES['lidar_clusters'] = 'lidar_cluster_list: %s'%lidar_cluster_list
 
 #			lidar_lines = lfm.clusters_to_lines(cluster_list)
 #			print 'lidar_lines: ', lidar_lines
+#	if EMULATE_SENSORS:
+#		time.sleep(.3)
 
-#	Lf = get_average_sector(data, 0, 20) # measure_distance(x, y, 0)
-#	Lr = get_average_sector(data, 90, 10) # measure_distance(x, y, -ORT)*
+
+@pu.functionThreader
+def lidar_worker():
+	while True:
+		process_lidar_data()
+
 
 def get_nearest_line_dir(flt=lambda x: True):
 	'Вернуть направление ближайшей линии'
@@ -628,22 +663,23 @@ def get_nearest_point_dir(flt=lambda x: True, index_range=None):
 #		return
 
 #	set_control_state("")
-#	print 'lidar_data:', lidar_data
+#	print 'lidar_data:', lidar_data['values']
 
 	with LOCK:
-#		values = list(lidar_data['values'])
-		flt_values = filter(flt, enumerate(lidar_data['values']))
+		values = lidar_data['values']
+		lidar_points = [values[i] for i in range(*index_range)] if index_range!=None else list(values)
 
-#	lidar_points = [flt_values[i] for i in range(*index_range)] if index_range!=None else flt_values
-
-#	print 'lidar_points len:', len(lidar_points)#, 'points:', lidar_points
-
+#	print 'lidar_points len:', len(lidar_points)
+	flt_values = [d for a,d in enumerate(lidar_points) if flt(a,d)]
+#	print 'flt point Xs:', [d*cos(radians(90+i+index_range[0])) for i, d in enumerate(lidar_points)]
+#	print 'flt_values len:', len(flt_values)#, 'points:', lidar_points
 	if len(flt_values)<1:
 		return	
 
+#	print 'flt_values:', flt_values
 	min_dist = min(flt_values)
 	
-	angle = radians(flt_points.index(min_dist)+index_range[0])+pi/2
+	angle = radians(lidar_points.index(min_dist)+index_range[0])+pi/2
 #	pdb.set_trace()
 
 #	print 'min_dist:', min_dist, 'angle:', angle
@@ -772,7 +808,6 @@ def right_wall_motion(x, y):
 
 
 def perspective_motion(x, y):
-#	CAR_CONTROLLER.set_offset(MOTION_SPEED)
 	if 0<MAIN_CYCLE_SLEEP:
 		time.sleep(MAIN_CYCLE_SLEEP)
 	
@@ -787,28 +822,38 @@ def perspective_motion(x, y):
 		return 0< xa <pi
 
 #	mdd = get_nearest_line_dir(line_angle_filter)
-	index_range = (-WALL_ANALYSIS_ANGLE, WALL_ANALYSIS_ANGLE)
-	motion_corridor = lambda d: (-WALL_ANALYSIS_DX_GAP< d[1]*cos(radians(d[0])) <WALL_ANALYSIS_DX_GAP) and d[0] in index_range
-	mdd = get_nearest_point_dir(motion_corridor)
+	idx_range = (-WALL_ANALYSIS_ANGLE, WALL_ANALYSIS_ANGLE)
+	motion_corridor = lambda a, d: (-WALL_ANALYSIS_DX_GAP< d*cos(radians(90+a-WALL_ANALYSIS_ANGLE)) <WALL_ANALYSIS_DX_GAP) #and d[0] in index_range
+	mdd = get_nearest_point_dir(motion_corridor, index_range=idx_range)
 	if mdd != None:
 		dist, angle = mdd
 		angle = normalize_angle(angle)
-		metric_dist = lidar_dist_to_metrics(dist)
-		if angle!=None and metric_dist<delta:
+		if angle!=None and dist<delta:
 			wall_ctrl_angle = xy_angle_to_control(angle)
-			set_control_state("Too close (%1.2f) to point @angle %1.2f. Moving away"%(metric_dist, wall_ctrl_angle))
+			set_control_state("Too close (%1.2f) to point @angle %1.2f. Moving away"%(lidar_dist_to_metrics(dist), wall_ctrl_angle))
 
 			ctrl_angle = wall_ctrl_angle+pi/4
-			da = pi/36
+			da = pi/18
 			wall = {'pos':(dist*cos(angle-da), dist*sin(angle-da)), 
 							'end': (dist*cos(angle+da), dist*sin(angle+da))}
 
-			plot_data(dist, ctrl_angle+pi/2, {"line": wall, "color":(255, 0, 0), "width": 3})
+			def wlf(s): 
+				dc = delta
+				x=WALL_ANALYSIS_DX_GAP*s
+				return {"line": {'pos':(x, 0), 'end': (x, dc)}, "color":(255, 255, 0), "width": 1}
+
+			primitives = [wlf(s) for s in (-1,1)]
+			primitives.append({"line": wall, "color":(255, 0, 0), "width": 1})
+#			x = WALL_ANALYSIS_DX_GAP*s
+
+			plot_data(dist, ctrl_angle+pi/2, *primitives)
+			if CONTROL_MOVE_DIR:
+				CAR_CONTROLLER.set_offset(TURN_MOTION_SPEED)
 			return set_direction_move(x, y, ctrl_angle, ASYNC_TURNS)
 
 #			return set_direction_move(x, y, (anti_norm_angle%pi)*2, False)
 
-	res_angle = None
+	res_angle = 2*pi
 	max_dist = MIN_LIDAR_DISTANCE
 		
 	global lidar_cluster_list
@@ -828,39 +873,35 @@ def perspective_motion(x, y):
 	selected_gap_vec = None
 	selected_gap_start = None
 	selected_gap_width = 0
-	max_gap_width = 0
-	min_angle = pi
 	for i in range(-1, local_clusters_len-1):
 		cluster1 = local_clusters[i]
 		cluster2 = local_clusters[i+1]
-#		if len(cluster)<2:
-#			set_control_state("Cluster list length < 2")
-#			continue
 
 		gap = (cluster1[-1], cluster2[0])
 		start, stop = gap 
-#		angle = radians(stop.get_angle_between(start)-start.get_angle())
-		angles_deg = (start.get_angle(), stop.get_angle())
+		angles_deg = (start.get_angle(), stop.get_angle()) # %360
 		angles = map(radians, angles_deg)
-		valid_angles = [angle for angle in angles if 0<=angle<=pi]
+		gate_dists = map(lambda x: x.get_length(), gap)
+		valid_angles = [a for a in angles if 0<=a<=pi]
 		if len(valid_angles)<1:
 #			print "No valid angles:", angles
 			continue
 
-		angle = sum(valid_angles)/len(valid_angles)
 		gap_vec = stop-start
 		gap_width = gap_vec.get_length()
-		if max_gap_width<gap_width:
-			max_gap_width = gap_width
-#			STATES['max_gap_width'] = "Max gap width %1.1f at angle %1.1f"%(lidar_dist_to_metrics(gap_width), angle)
-#			res_angle = angle
-
-#		continue
-
 		if gap_width<MIN_GAP_WIDTH:
 #			print "Gap width %d not valid"%gap_width
 #			set_control_state("Gap (%d,%d) not valid"%(gap_width, angle))
 			continue
+
+		rad_norm_angles = [a%(2*pi) for a in angles]
+		min_angle = min(rad_norm_angles)
+		gate_dist = gate_dists[rad_norm_angles.index(min_angle)]
+
+		angle = min_angle + Dr/gate_dist
+#		angle = min_angle + copysign(Dr/gate_dist, pi/2-min_angle)
+
+#		print "rad_norm_angles:", rad_norm_angles, 'gate_dist:', gate_dist, 'angle:', angle
 
 		set_control_state("Found valid gap")
 		dist = MAX_LIDAR_DISTANCE # max((point.get_length() for point in gap))
@@ -872,6 +913,8 @@ def perspective_motion(x, y):
 			selected_gap_vec = gap_vec
 			selected_gap_start = start
 
+#			print "angles:", angles, "angle:", angle
+#			print "valid angles:", valid_angles
 	
 #	set_control_state("Checking res_angle")
 	if res_angle!=None:
@@ -883,10 +926,15 @@ def perspective_motion(x, y):
 #Отображает точки, в формате:
 		points = {
             "points": selected_gap,
-            "color": (0,0,255),
+            "color": (255, 0, 255, 125),
             "size": 10
         }
+		if selected_gap_vec is None:
+			return
+
 		plot_data((selected_gap_start+selected_gap_vec/2).get_length(), res_angle, points)
+		if CONTROL_MOVE_DIR:
+			CAR_CONTROLLER.set_offset(MOTION_SPEED)
 
 		return set_direction_move(x, y, control_angle, ASYNC_TURNS)
 	
@@ -917,6 +965,7 @@ loggers.configureRotatingFileLogger(sys.argv[1], minLogLevel=loggers.INFO, fileL
 #loggers.logging.getLogger("PyQt4").setLevel(logging.INFO)
 
 def connect(rpi_host, timout=2):
+	loggers.logOut('Connecting to control service...')
 	CAR_CONTROLLER.connect(1, {"host": rpi_host, "port": 1111})
 	loggers.logOut('Raspberry connected. Waiting for initialization %d seconds...'%timout)
 	time.sleep(timout)
@@ -935,13 +984,26 @@ def stop(rpi_host, connect_rpi=True):
 
 
 def simulate(iter_num=10000):
-	global s, lidar_data, lidar_data_queue, EMULATE_SENSORS, CONTROL_MOVE_DIR
+	global EMULATE_SENSORS, CONTROL_MOVE_DIR
 #	from Queue import Queue
 
 	EMULATE_SENSORS = True
 	CONTROL_MOVE_DIR = False
-	return control('', iter_num, max_queue_size=1)
+	return control(None, iter_num, max_queue_size=1)
 
+
+def oscillation_test(rpi_host, a=pi/2, async=True):
+#	from Queue import Queue
+	sl_time = 1
+	connect(rpi_host)
+
+	CAR_CONTROLLER.set_offset(MOTION_SPEED)
+	while True:
+		turn_to(a, async)
+		time.sleep(sl_time)
+		turn_to(-a, async)
+		time.sleep(sl_time)
+		
 
 if __name__ == "__main__":
 	try:

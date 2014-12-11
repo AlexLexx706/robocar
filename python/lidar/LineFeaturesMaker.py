@@ -15,53 +15,90 @@ class LineFeaturesMaker:
                       (Vec2d(-1.0, 0.0), Vec2d(0.0, -1.0)),
                       (Vec2d(0.0, -1.0), Vec2d(1.0, 0.0))]
 
-    def sector_to_points_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
-        '''Преобразует данные сектора кластеры точек
-           Возвращаеть лист листов Vec2d
+
+    def sector_to_points(self, data, start_angle=math.pi/2.0, max_radius=1000):
+        '''Преобразует сектор в точки
+            start_angle - угол смещения
+            max_radius - порог по радиусу, прикорором точка не строится
+            result: [Vec2d,...]
+        '''
+        res = []
+        da = data["angle"] / (len(data["values"]))
+
+        for i, value in enumerate(reversed(data["values"])):
+            if max_radius is not None and value > max_radius:
+                continue
+            res.append(Vec2d(math.cos(start_angle + da * i) * value,
+                              math.sin(start_angle + da * i) * value))
+        return res
+
+
+    def sector_to_points_clusters(self, data, start_angle=math.pi/2.0, max_radius=1000, max_offset=30, min_cluster_len=5):
+        '''Преобразует сектор или лист точек в лист кластеров точек
+            data - сектор или лист точек
+            start_angle - угол смещения
+            max_radius - порог по радиусу, прикорором точка не строится
+            max_offset - смотри make_clusters
+            min_cluster_len - смотри make_clusters
+            result: - лист кластеров - [[Vec2d,...], ...]
         '''
 
         #преобразуем сектор в лист точек
         if isinstance(data, dict):
-            data = self.sector_to_points(data, start_angle, max_len)
+            data = self.sector_to_points(data, start_angle, max_radius)
 
-        return [[k,] for k in self.make_clusters(data)]
+        #фильтр кластеров по количеству точек
+        return self.make_clusters(data, max_offset=max_offset, min_cluster_len=min_cluster_len)
 
-    def sector_to_lines_clusters(self, data, start_angle=math.pi/2.0, max_len=1000):
-        '''Преобразует данные сектора в кластеры линий
-            Возвращаеть лист листов Vec2d
+    def sector_to_lines_clusters(self,
+                                    data,
+                                    start_angle=math.pi/2.0,
+                                    max_radius=1000,
+                                    max_offset=30,
+                                    min_cluster_len=5,
+                                    split_threshold=2.0,
+                                    merge_threshold=0.98):
+        '''Преобразует сектор или лист точек в лист кластеров линий
+            data - сектор или лист точек
+            start_angle - угол смещения
+            max_radius - порог по радиусу, прикорором точка не строится
+            max_offset - смотри make_clusters
+            min_cluster_len - смотри make_clusters
+            split_threshold - смотри split_and_merge_cluster
+            merge_threshold - смотри split_and_merge_cluster
+            result: - лист кластеров - [[Vec2d,...], ...]
         '''
         res = []
 
         #преобразуем сектор в лист точек
         if isinstance(data, dict):
-            data = self.sector_to_points(data, start_angle, max_len)
+            data = self.sector_to_points(data, start_angle, max_radius)
 
-        for cluster in self.make_clusters(data):
-            #отсекаем кластеры меньше 5 точек.
-            if len(cluster) < 5:
-                continue
-            res.append(self.split_and_merge_cluster(cluster))
+        for cluster in self.make_clusters(data, max_offset=max_offset, min_cluster_len=min_cluster_len):
+            res.extend(self.split_and_merge_cluster(cluster, split_threshold=split_threshold, merge_threshold=merge_threshold))
         return res
 
-    def linearization_clusters_data(self, clusters_list):
-        '''Преобразует данные кластеров точек в кластеры точек в которых точки в кластере выстроены вдоль направления кластера'''
+    def clusters_to_lines_cluster(self, clusters):
+        '''Преобразует данные кластеров точек в кластеры точек в которых точки в
+            кластере выстроены вдоль направления кластера
+        '''
         p_dist = 2.0
         
-        for clusters in clusters_list:
-            for i, cluster in enumerate(clusters):
-                s_p = cluster[0]
-                e_p = cluster[-1]
-                direction = e_p - s_p
-                l = direction.normalize_return_length()
-                count = int(l / p_dist)
-                
-                #мало точек
-                if count  < 2:
-                    clusters[i] = [s_p, e_p]
-                else:
-                    clusters[i] = [s_p + direction * (p_dist * k) for k in range(count)]
-                    clusters[i].append(e_p)
-        return clusters_list
+        for i, cluster in enumerate(clusters):
+            s_p = cluster[0]
+            e_p = cluster[-1]
+            direction = e_p - s_p
+            l = direction.normalize_return_length()
+            count = int(l / p_dist)
+
+            #мало точек
+            if count  < 2:
+                clusters[i] = [s_p, e_p]
+            else:
+                clusters[i] = [s_p + direction * (p_dist * k) for k in range(count)]
+                clusters[i].append(e_p)
+
+        return clusters
 
     def pair_points_to_line(self, p1, p2):
         """Преобразует пару точек в описание линии"""
@@ -70,6 +107,7 @@ class LineFeaturesMaker:
         n = d.perpendicular()
         center = p1 + d * l / 2.0
         distance = center.get_length()
+
         return {"pos": p1,
                       "end": p2,
                       "dir": d,
@@ -78,14 +116,9 @@ class LineFeaturesMaker:
                       "center": center,
                       "distance": distance}
 
-    def clusters_to_lines(self, clusters_list):
+    def clusters_to_lines(self, clusters):
         '''Преобразует список кластеров в линии (start, stop, direction, normal)'''
-        lines = []
-
-        for clusters in clusters_list:
-            for cluster in clusters:
-                lines.append(self.pair_points_to_line(Vec2d(cluster[0]), Vec2d(cluster[-1])))
-        return lines
+        return [self.pair_points_to_line(Vec2d(cluster[0]), Vec2d(cluster[-1])) for cluster in clusters]
 
     def search_similar(self, before_lines_frame, cur_lines_frame, max_angle=10., max_distance=10):
         '''Поиск похожих линий в кадрах'''
@@ -164,29 +197,16 @@ class LineFeaturesMaker:
         dy = p1.y + ta * (p2.y - p1.y)
         return Vec2d(dx, dy)
 
-
-    def sector_to_points(self, data, start_angle=math.pi/2.0, max_len=1000):
-        '''Преобразует сектор в точки
-            Возвращает лист точек
+    def make_clusters(self, points, max_offset=30, min_cluster_len=5):
+        '''кластиризуем последовательности точек
+            max_offset - порог расстояния между точками при котором считаем точки приниждежащими одному кластеру,
+            min_cluster_len - минимальный размер кластера при котором кластер игнорируется
         '''
-        res = []
-        da = data["angle"] / (len(data["values"]))
-
-        for i, value in enumerate(reversed(data["values"])):
-            if max_len is not None and value > max_len:
-                continue
-            res.append(Vec2d(math.cos(start_angle + da * i) * value,
-                              math.sin(start_angle + da * i) * value))
-        return res
-
-    def make_clusters(self, points):
-        '''кластиризуем последовательности точек'''
         if len(points) == 0:
             return []
 
         s_pos = points[0]
         clasters = [[s_pos, ]]
-        max_offset = 30
 
         def check(s_pos, c_pos):
             '''проверка группировки в кластер, по максимальному шагу'''
@@ -207,14 +227,24 @@ class LineFeaturesMaker:
             if check(clasters[0][0], clasters[-1][-1]):
                 clasters[-1].extend(clasters[0])
                 clasters.pop(0)
+
+        #фильтрация кластеров по количеству точек
+        if min_cluster_len > 0:
+            return [c for c in clasters if len(c) > min_cluster_len]
+
         return clasters
 
-    def split_and_merge_cluster(self, cluster):
-        '''преобразуем кластер точек в набор прямых'''
+    def split_and_merge_cluster(self, cluster, split_threshold=2.0, merge_threshold=0.98):
+        '''преобразуем кластер точек в кластеры прямых
+            cluster - лист кластеров
+            split_threshold - порог разделяет класер на класеры, если отклоненние точек
+                кластера от центрального направления класера больше порога
+            merge_threshold = cos(angle) - коэффицент используется для обьединения соседних класетров линий в общий кластер линии,
+             соседние кластера обьединияются если отклонение направлений меньше заданного
+        '''
 
         def split(cluster, res):
             '''Рекурсивное разделение кластера на маленькие линии'''
-            threshold = 2
 
             #проверим максимальное отклонение от направления
             if len(cluster) > 2:
@@ -234,7 +264,7 @@ class LineFeaturesMaker:
                         max_i = i
 
                 #делим кластер на два кластера
-                if max > threshold:
+                if max > split_threshold:
                     split(cluster[:max_i + 2], res)
                     split(cluster[max_i + 1:], res)
                 #не делим кластер
@@ -255,10 +285,10 @@ class LineFeaturesMaker:
                 while i < len(clusters):
                     cur = clusters[i]
 
-                    v = (cur[-1] - first[0]).perpendicular_normal().dot(first[-1] - first[0])
+                    v = (cur[-1] - first[0]).normalized().dot((first[-1] - first[0]).normalized())
 
                     #проверка обьединения.
-                    if abs(v) < threshold:
+                    if v > merge_threshold:
                         first.extend(cur)
                         clusters.pop(i)
                         no_merge = False

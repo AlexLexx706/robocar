@@ -1,4 +1,6 @@
+#!/usr/bin/python 
 # -*- coding: utf-8 -*-
+
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import pyqtgraph as pg
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 class LidarFrame(QtGui.QFrame):
     new_data = pyqtSignal(object)
     new_video_frame = pyqtSignal("QImage")
+    close_window = pyqtSignal()
     
     def __init__(self, settings, parent=None, in_gueue_sector_data = None):
         super(QtGui.QFrame, self).__init__(parent)
@@ -29,6 +32,7 @@ class LidarFrame(QtGui.QFrame):
         self.view_layout.addWidget(self.view)
         self.stop_flag = True
         self.new_data.connect(self.on_new_data)
+        self.close_window.connect(self.close)
         self.lineEdit_host.setText(self.settings.value("lidar_host", "192.168.0.91").toString())
         self.spinBox_port.setValue(self.settings.value("lidar_port", 8080).toInt()[0])
         
@@ -57,6 +61,7 @@ class LidarFrame(QtGui.QFrame):
         
         if self.in_gueue_sector_data is not None:
             self.start()
+            self.groupBox_connection.setEnabled(False)
 
     @pyqtSlot(bool)
     def on_groupBox_use_step_clicked(self, checked):
@@ -141,25 +146,27 @@ class LidarFrame(QtGui.QFrame):
         self.next_event.set()
 
     def start(self):
-        url = (unicode(self.lineEdit_host.text()), self.spinBox_port.value())
-
         if self.stop_flag:
             self.stop_flag = False
             self.first_draw = True
             self.frame_number = 0
-            
+            self.data_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
+            self.url = (unicode(self.lineEdit_host.text()), self.spinBox_port.value())
+
             #чтение из очереди
             if self.in_gueue_sector_data is not None:
+                if not self.checkBox_record.isChecked():
+                    self.data_file = None
                 self.read_thread = threading.Thread(target=self.read_queue_proc)
             else:
-                out_file = unicode(self.settings.value("lidar_record_file", "data.dat").toString())
-
                 #запуск чтения с датчика
                 if self.groupBox_connection.isChecked():
-                    self.read_thread = threading.Thread(target=self.read_server_proc, args=(url, out_file if self.checkBox_record.isChecked() else None))
+                    if not self.checkBox_record.isChecked():
+                        self.data_file = None
+                    self.read_thread = threading.Thread(target=self.read_server_proc)
                 #запуск из файла
                 else:
-                    self.read_thread = threading.Thread(target=self.read_file_proc, args=(out_file, ))
+                    self.read_thread = threading.Thread(target=self.read_file_proc)
             self.pushButton_control.setText(u"Стоп")
             self.read_thread.start()
     
@@ -188,49 +195,47 @@ class LidarFrame(QtGui.QFrame):
             return True
         return False
 
-    def read_server_proc(self, url, out_file):
-        client = Client(url)
+    def read_server_proc(self):
+        client = Client(self.url, serialization="mesgpack")
         
         #Создадим поток для записи данных
-        if out_file is not None:
-            out_file = pickle.Pickler(open(out_file, "wb"))
-
-        self.lines_before = None
-        self.odometry_angle = 0.0
+        if self.data_file is not None:
+            self.data_file = pickle.Pickler(open(self.data_file, "wb"))
 
         while not self.stop_flag:
             data = client.ik_get_sector(1)
 
             if data is not None:
-                self.prepare_data(data[0])
+                data = data[0]
+                self.prepare_data(data)
 
                 #пишем поток.
-                if out_file is not None:
-                    out_file.dump(data)
+                if self.data_file is not None:
+                    self.data_file.dump(data)
 
                 self.wait_next_step()
 
-    def read_file_proc(self, file_path):
-        if not os.path.exists(file_path):
+    def read_file_proc(self):
+        if not os.path.exists(self.data_file):
             return
 
-        stream = pickle.Unpickler(open(file_path, "rb"))
-        self.lines_before = None
-        self.odometry_angle = 0.0
-
+        stream = pickle.Unpickler(open(self.data_file, "rb"))
 
         while not self.stop_flag:
             try:
                 data = stream.load()
                 self.prepare_data(data)
                 if not self.wait_next_step():
-                    time.sleep(0.25)
+                    time.sleep(0.1)
             #конец файла
             except EOFError:
-                stream = pickle.Unpickler(open(file_path, "rb"))
+                stream = pickle.Unpickler(open(self.data_file, "rb"))
                 time.sleep(1)
 
     def read_queue_proc(self):
+        if self.data_file is not None:
+            self.data_file = pickle.Pickler(open(self.data_file, "wb"))
+
         while not self.stop_flag:
             try:
                 self.wait_next_step()
@@ -239,35 +244,71 @@ class LidarFrame(QtGui.QFrame):
                 continue
 
             if data is None:
+                self.close_window.emit()
                 return
 
-            draw_data = {"frame_number": self.frame_number,
-                         "primetives": data}
+            draw_data = {"frame_number": self.frame_number, "primetives": []}
+
+            if "primetives" in data:
+                draw_data["primetives"].extend(data["primetives"])
+
+            if "sector" in data:
+                #draw_data["primetives"].extend(self.sector_2_primetives(data["sector"]))
+
+                #Запись данных
+                if self.data_file is not None:
+                    self.data_file.dump(data["sector"])
+
             self.frame_number += 1
             self.new_data.emit(draw_data)
 
 
+    def sector_2_primetives(self, data):
+        if self.groupBox_sector.isChecked():
+            primetives = []
+            points = self.lfm.sector_to_points(data,
+                                                start_angle=self.doubleSpinBox_start_angle.value(),
+                                                max_radius=self.doubleSpinBox_max_radius.value())
+            if self.groupBox_points.isChecked():
+                primetives.append({"points": points, "color":(255, 0, 0), "size": self.spinBox_size.value()})
+
+            #2. найдём кластеры линий.
+            if self.groupBox_clusters.isChecked():
+                #Кластеры точек
+                if self.checkBox_points_clusters.isChecked():
+                    clasters = self.lfm.sector_to_points_clusters(points,
+                                                max_offset = self.doubleSpinBox_max_offset.value(),
+                                                min_cluster_len=self.spinBox_min_cluster_len.value(),
+                                                start_angle=self.doubleSpinBox_start_angle.value(),
+                                                max_radius=self.doubleSpinBox_max_radius.value())
+                    for i, c in enumerate(clasters):
+                        color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
+                        primetives.append({"points": c, "color": color, "size": self.spinBox_clasters_size.value()})
+
+                if self.groupBox_lines_clusters.isChecked():
+                    clasters = self.lfm.sector_to_lines_clusters(points,
+                                                max_offset = self.doubleSpinBox_max_offset.value(),
+                                                min_cluster_len=self.spinBox_min_cluster_len.value(),
+                                                split_threshold=self.doubleSpinBox_split_threshold.value(),
+                                                merge_threshold=math.cos(self.doubleSpinBox_merge_threshold.value()/180.*math.pi))
+
+                    if self.radioButton_points.isChecked():
+                        for i, c in enumerate(clasters):
+                            color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
+                            primetives.append({"points": c, "color": color, "size": self.spinBox_clasters_size.value()})
+                    else:
+                        for i, c in enumerate(clasters):
+                            color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
+                            primetives.append({"line": {"pos":c[0], "end": c[-1]}, "color": color})
+
+
+            return primetives
+
     def prepare_data(self, data):
-        points = self.lfm.sector_to_points(data)
-
-        #1. Отобразим точки
-        primetives = [{"points": points, "color":(255, 0, 0), "size": 2}, ]
-
-        #2. найдём кластеры линий.
-        if 0:
-            clasters = self.lfm.sector_to_lines_clusters(points)
-
-            i = 0
-            for c_l in clasters:
-                for c in c_l:
-                    primetives.append({"line": self.lfm.point_to_line_sqr_approx(c), "color":(0, 255, 0), "text": str(i), "width":3})
-                    i += 1
-
-        draw_data = {"frame_number": self.frame_number,
-                     "primetives": primetives}
-
+        draw_data = {"frame_number": self.frame_number, "primetives": self.sector_2_primetives(data)}
         self.frame_number += 1
         self.new_data.emit(draw_data)
+
 
     def draw_points(self, info):
         '''
@@ -285,6 +326,7 @@ class LidarFrame(QtGui.QFrame):
 
         if "color" in info:
             spi.setBrush(pg.mkBrush(info["color"]))
+            spi.setPen(pg.mkPen(color=info["color"]))
 
         self.plot.addItem(spi)
 
