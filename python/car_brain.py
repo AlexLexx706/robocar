@@ -289,16 +289,16 @@ if __name__ == "__main__":
     #logging.getLogger("protocol").setLevel(50)
     logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s %(message)s', level=logging.DEBUG)
 
-    #protocol_url = (1, {"host": "192.168.10.154", "port": 1111})
-    protocol_url = (1, {"host": "192.168.0.91", "port": 1111})
+    protocol_url = (1, {"host": "192.168.10.154", "port": 1111})
+    #protocol_url = (1, {"host": "192.168.0.91", "port": 1111})
     #protocol_url = (0, {"port": "com26", "baudrate":115200, "timeout":2, "writeTimeout":2})
     #protocol_url = (0, {"port": "/dev/ttyUSB0", "baudrate":115200, "timeout":2, "writeTimeout":2})
-    #lidar_url = ("192.168.10.154", 8080)
+    lidar_url = ("192.168.10.154", 8080)
     #lidar_url = "data.dat"
     #lidar_url = ("localhost", 8080)
-    lidar_url = ("192.168.0.91", 8080)
+    #lidar_url = ("192.168.0.91", 8080)
 
-    cb = CarBrain(protocol_url, lidar_url, use_control=False)
+    cb = CarBrain(protocol_url, lidar_url, use_control=True)
     cb.start()
     try:
         while 1:

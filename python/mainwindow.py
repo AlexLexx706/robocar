@@ -11,13 +11,15 @@ from LidarFrame import LidarFrame
 import Queue
 import random
 import time
+from alg_controls import AlgControls
 
 
 class MainWindow(QtGui.QMainWindow):
-    KEY_A = 65
-    KEY_W = 87
-    KEY_D = 68
-    KEY_S = 83
+    KEY_A = QtCore.Qt.Key_A
+    KEY_W = QtCore.Qt.Key_W
+    KEY_D = QtCore.Qt.Key_D
+    KEY_S = QtCore.Qt.Key_S
+
     CHECKED_KEYS = [KEY_A, KEY_W, KEY_D, KEY_S]
     add_line = pyqtSignal(str)
     update_info = pyqtSignal(object)
@@ -33,6 +35,11 @@ class MainWindow(QtGui.QMainWindow):
         self.read_protocol_res_thread.start()
 
         self.protocol = Protocol(self.protocol_result_queue)
+
+        #Добавим контроль алгоритма
+        self.alg_control = AlgControls(self.settings, self.protocol)
+        self.tabWidget.addTab(self.alg_control, u"Алгоритм уравления")
+
 
         self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
@@ -86,7 +93,7 @@ class MainWindow(QtGui.QMainWindow):
 
         self.wheel_timer = QtCore.QTimer()
         self.wheel_timer.timeout.connect(self.on_update_wheels)
-        self.wheel_timer.setInterval(100)
+        self.wheel_timer.setInterval(300)
         self.wheel_timer.setSingleShot(False)
         self.l = 0.0
         self.r = 0.0
@@ -94,13 +101,29 @@ class MainWindow(QtGui.QMainWindow):
         
         #добавим лидар
         self.lidar_frame = LidarFrame(self.settings, self)
+        
+        #Добавим функцию управления
+        self.lidar_frame.update_control_angle = self.alg_control.update_angle
+        
         self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
         self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
         self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
         self.lidar_frame.label_video.addAction(self.action_reset_camera)
-        
         self.dos_stop_flag = True
     
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress:
+            if event.key() in self.CHECKED_KEYS:
+                if not event.isAutoRepeat() and not self.kay_states[event.key()]:
+                    self.kay_states[event.key()] = True
+                    self.update_car_controll()
+        elif event.type() == QtCore.QEvent.KeyRelease:
+            if event.key() in self.CHECKED_KEYS:
+                if not event.isAutoRepeat() and self.kay_states[event.key()]:
+                    self.kay_states[event.key()] = False
+                    self.update_car_controll()
+        return False
+
     def dos_proc(self):
         while not self.dos_stop_flag:
             self.protocol.turn((random.random() * 2 - 1.0) * 2, no_wait=True)
@@ -279,7 +302,7 @@ class MainWindow(QtGui.QMainWindow):
         else:
             angle = math.pi/180. * 20
             angle_speed=math.pi/ 180. * 80.
-            power = 0.6
+            power = 0.8
             
             if self.kay_states[self.KEY_A]:
                 self.protocol.turn(angle, angle_speed=angle_speed, no_wait=True)
@@ -307,22 +330,7 @@ class MainWindow(QtGui.QMainWindow):
     def on_checkBox_enable_debug_stateChanged(self, state):
         self.settings.setValue("enable_debug", state == QtCore.Qt.Checked)
         self.protocol.set_enable_debug(state == QtCore.Qt.Checked)
-       
-    def winEvent(self, message):
-        #wm_keydown
-        if message.message == 0x0100:
-            if message.wParam in self.CHECKED_KEYS:
-                if not self.kay_states[message.wParam]:
-                    self.kay_states[message.wParam] = True
-                    self.update_car_controll()
-        #wm_keyup
-        elif message.message == 0x0101:
-            if message.wParam in self.CHECKED_KEYS:
-                if self.kay_states[message.wParam]:
-                    self.kay_states[message.wParam] = False
-                    self.update_car_controll()
-        return QtGui.QMainWindow.winEvent(self, message)
-    
+   
     def on_add_char(self, s):
         cursor = self.plainTextEdit_log.textCursor()
         cursor.movePosition(0, 11)

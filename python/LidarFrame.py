@@ -3,7 +3,6 @@
 
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
-import pyqtgraph as pg
 import logging
 import threading
 import math
@@ -14,7 +13,11 @@ from tcp_rpc.client import Client
 from lidar.Vec2d import Vec2d
 from lidar.LineFeaturesMaker import LineFeaturesMaker
 from cross_detector.ffmpeg_reader import FFmpegReader
+from data_view_2 import DataView
+#from data_view import DataView
 import Queue
+import right_wall_lidar_motion
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ class LidarFrame(QtGui.QFrame):
         uic.loadUi(os.path.join(os.path.split(__file__)[0], "LidarFrame.ui"), self)
         self.settings = settings
                 
-        self.view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
+        self.view = DataView()
         self.view_layout.addWidget(self.view)
         self.stop_flag = True
         self.new_data.connect(self.on_new_data)
@@ -39,12 +42,7 @@ class LidarFrame(QtGui.QFrame):
         self.groupBox_connection.setChecked(self.settings.value("lidar_use_connection", True).toBool())
         self.checkBox_record.setChecked(self.settings.value("lidar_record", False).toBool())
         self.groupBox_use_step.setChecked(self.settings.value("lidar_use_step", False).toBool())
-
-        ## create four areas to add plots
-        self.plot = self.view.addPlot()
-        self.plot.showGrid(x=True, y=True)
-        self.plot.setAspectLocked()
-
+        
         self.write_file = None
         self.lfm = LineFeaturesMaker()
         
@@ -59,9 +57,19 @@ class LidarFrame(QtGui.QFrame):
         self.label_frame.setText("0")
         self.frame_number = 0
         
+        self.init_sector_controlls()
+        self.init_alg_controlls()
+        
+        self.update_control_angle = None
+        
         if self.in_gueue_sector_data is not None:
             self.start()
             self.groupBox_connection.setEnabled(False)
+         
+            
+    def on_new_data(self, data):
+        self.label_frame.setText(str(data["frame_number"]))
+        self.view.draw_data(data)
 
     @pyqtSlot(bool)
     def on_groupBox_use_step_clicked(self, checked):
@@ -253,7 +261,7 @@ class LidarFrame(QtGui.QFrame):
                 draw_data["primetives"].extend(data["primetives"])
 
             if "sector" in data:
-                #draw_data["primetives"].extend(self.sector_2_primetives(data["sector"]))
+                draw_data["primetives"].extend(self.sector_2_primetives(data["sector"]))
 
                 #Запись данных
                 if self.data_file is not None:
@@ -264,18 +272,25 @@ class LidarFrame(QtGui.QFrame):
 
 
     def sector_2_primetives(self, data):
-        if self.groupBox_sector.isChecked():
-            primetives = []
+        primetives = self.draw_clusters(data)
+        primetives.extend(self.draw_alg(data))
+        return primetives
+        
+    
+    def draw_clusters(self, data):
+        primetives = []
+        
+        if self.groupBox_show_sector.isChecked():
             points = self.lfm.sector_to_points(data,
                                                 start_angle=self.doubleSpinBox_start_angle.value(),
                                                 max_radius=self.doubleSpinBox_max_radius.value())
-            if self.groupBox_points.isChecked():
-                primetives.append({"points": points, "color":(255, 0, 0), "size": self.spinBox_size.value()})
+            if self.groupBox_show_points.isChecked():
+                primetives.append({"points": points, "color":(255, 0, 0), "size": self.spinBox_points_size.value()})
 
             #2. найдём кластеры линий.
-            if self.groupBox_clusters.isChecked():
+            if self.groupBox_show_clusters.isChecked():
                 #Кластеры точек
-                if self.checkBox_points_clusters.isChecked():
+                if self.checkBox_show_points_clusters.isChecked():
                     clasters = self.lfm.sector_to_points_clusters(points,
                                                 max_offset = self.doubleSpinBox_max_offset.value(),
                                                 min_cluster_len=self.spinBox_min_cluster_len.value(),
@@ -285,118 +300,196 @@ class LidarFrame(QtGui.QFrame):
                         color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
                         primetives.append({"points": c, "color": color, "size": self.spinBox_clasters_size.value()})
 
-                if self.groupBox_lines_clusters.isChecked():
+                if self.groupBox_show_lines_clusters.isChecked():
                     clasters = self.lfm.sector_to_lines_clusters(points,
                                                 max_offset = self.doubleSpinBox_max_offset.value(),
                                                 min_cluster_len=self.spinBox_min_cluster_len.value(),
                                                 split_threshold=self.doubleSpinBox_split_threshold.value(),
                                                 merge_threshold=math.cos(self.doubleSpinBox_merge_threshold.value()/180.*math.pi))
 
-                    if self.radioButton_points.isChecked():
+                    if self.checkBox_show_line_cluster_points.isChecked():
                         for i, c in enumerate(clasters):
                             color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
                             primetives.append({"points": c, "color": color, "size": self.spinBox_clasters_size.value()})
-                    else:
+                    
+                    if self.checkBox_show_line_cluster_lines.isChecked():
                         for i, c in enumerate(clasters):
                             color = QtGui.QColor(QtCore.Qt.GlobalColor(3+i%19)).getRgb()[:-1]
                             primetives.append({"line": {"pos":c[0], "end": c[-1]}, "color": color})
+        return primetives
+    
+    def draw_alg(self, data):
+        if self.groupBox_show_alg.isChecked() and data is not None:
+            right_wall_lidar_motion.DELTA = self.doubleSpinBox_alg_DELTA.value()
+            right_wall_lidar_motion.WALL_ANALYSIS_DX_GAP = self.doubleSpinBox_alg_WALL_ANALYSIS_DX_GAP.value()
+            right_wall_lidar_motion.WALL_ANALYSIS_ANGLE = int(self.doubleSpinBox_alg_WALL_ANALYSIS_ANGLE.value())
+            right_wall_lidar_motion.MIN_LIDAR_DISTANCE = self.doubleSpinBox_alg_MIN_LIDAR_DISTANCE.value()
+            right_wall_lidar_motion.MAX_LIDAR_DISTANCE = self.doubleSpinBox_alg_MAX_LIDAR_DISTANCE.value()
+            right_wall_lidar_motion.TRUSTABLE_LIDAR_DISTANCE = self.doubleSpinBox_alg_TRUSTABLE_LIDAR_DISTANCE.value()
 
+            right_wall_lidar_motion.MIN_GAP_WIDTH = self.doubleSpinBox_alg_MIN_GAP_WIDTH.value()
 
-            return primetives
+            right_wall_lidar_motion.Dr = self.doubleSpinBox_alg_Dr.value()
+            right_wall_lidar_motion.Da = self.doubleSpinBox_alg_Da.value()
+            right_wall_lidar_motion.Dh = self.doubleSpinBox_alg_Dh.value()
+            
+            move_res = right_wall_lidar_motion.move(data)
+            
+            if move_res is not None and 'primitives' in move_res:
+                dir_dist = 100
+                dir_line = {"line": {'pos':(0,0),
+                                     'end': (dir_dist * math.cos(math.pi / 2.0 + move_res['turn_angle']),
+                                             dir_dist * math.sin(math.pi / 2.0 + move_res['turn_angle']))},
+                           "color":(0, 255, 0)}
+                move_res["primitives"].append(dir_line)
+                
+                #Добавим в алгоритм управления данные
+                if self.update_control_angle is not None:
+                    self.update_control_angle(move_res['turn_angle'])
+                
+                return move_res["primitives"]
 
+        return []
+                
+                
+    @pyqtSlot(bool)
     def prepare_data(self, data):
         draw_data = {"frame_number": self.frame_number, "primetives": self.sector_2_primetives(data)}
         self.frame_number += 1
         self.new_data.emit(draw_data)
+    
+    
+    ###########################################################################
+    @pyqtSlot(bool)
+    def on_groupBox_show_sector_toggled(self, state):
+        self.settings.setValue("lidar_show_sector", state)
+        
+    @pyqtSlot("double")
+    def on_doubleSpinBox_start_angle_valueChanged(self, value):
+        self.settings.setValue("lidar_start_angle", value)
+        
+    @pyqtSlot("double")
+    def on_doubleSpinBox_max_radius_valueChanged(self, value):
+        self.settings.setValue("lidar_max_radius", value)
 
+    @pyqtSlot("int")
+    def on_spinBox_points_size_valueChanged(self, value):
+        self.settings.setValue("lidar_points_size", value)
+        
+    @pyqtSlot("bool")
+    def on_groupBox_show_points_toggled(self, value):
+        self.settings.setValue("lidar_points", value)
+       
+    @pyqtSlot(bool)
+    def on_groupBox_show_clusters_toggled(self, state):
+        self.settings.setValue("lidar_show_clusters", state)
 
-    def draw_points(self, info):
-        '''
-        Отображает точки, в формате:{
-            "points": [Vec2d,...],
-            "color":(r,g,b,a), - опционально
-            "size": int - опционально
-        }
-        '''
-        spi = pg.ScatterPlotItem()
-        spi.setData(pos=info["points"])
+    @pyqtSlot("int")
+    def on_spinBox_clasters_size_valueChanged(self, value):
+        self.settings.setValue("lidar_clasters_size", value)
+    
+    @pyqtSlot("double")
+    def on_doubleSpinBox_max_offset_valueChanged(self, value):
+        self.settings.setValue("lidar_max_offset", value)
 
-        if "size" in info:
-            spi.setSize(info["size"])
+    @pyqtSlot("int")
+    def on_spinBox_min_cluster_len_valueChanged(self, value):
+        self.settings.setValue("lidar_min_cluster_len", value)
+    
+    @pyqtSlot(bool)
+    def on_checkBox_show_points_clusters_toggled(self, state):
+        self.settings.setValue("lidar_show_points_clusters", state)
+   
+    @pyqtSlot(bool)
+    def on_groupBox_show_lines_clusters_toggled(self, state):
+        self.settings.setValue("lidar_show_lines_clusters", state)
+    
+    @pyqtSlot("double")
+    def on_doubleSpinBox_split_threshold_valueChanged(self, value):
+        self.settings.setValue("lidar_split_threshold", value)
 
-        if "color" in info:
-            spi.setBrush(pg.mkBrush(info["color"]))
-            spi.setPen(pg.mkPen(color=info["color"]))
+    @pyqtSlot("double")
+    def on_doubleSpinBox_merge_threshold_valueChanged(self, value):
+        self.settings.setValue("lidar_merge_threshold", value)
+    
+    @pyqtSlot(bool)
+    def on_checkBox_show_line_cluster_points_toggled(self, state):
+        self.settings.setValue("lidar_show_line_cluster_points", state)
+    
+    def on_checkBox_show_line_cluster_lines_toggled(self, state):
+        self.settings.setValue("lidar_show_line_cluster_lines", state)
+    
+    
+    def init_sector_controlls(self):
+        self.groupBox_show_sector.setChecked(self.settings.value("lidar_show_sector", True).toBool())
+        self.doubleSpinBox_start_angle.setValue(self.settings.value("lidar_start_angle", 1.57).toDouble()[0])
+        self.doubleSpinBox_max_radius.setValue(self.settings.value("lidar_max_radius", 1000).toInt()[0])
+        self.groupBox_show_points.setChecked(self.settings.value("lidar_points", True).toBool())
+        self.groupBox_show_clusters.setChecked(self.settings.value("lidar_show_clusters", True).toBool())
+        self.spinBox_clasters_size.setValue(self.settings.value("lidar_clasters_size", 3).toInt()[0])
+        self.doubleSpinBox_max_offset.setValue(self.settings.value("lidar_max_offset", 30.0).toDouble()[0])
+        self.spinBox_min_cluster_len.setValue(self.settings.value("lidar_min_cluster_len", 0).toInt()[0])
+        self.checkBox_show_points_clusters.setChecked(self.settings.value("lidar_show_points_clusters", True).toBool())
+        self.groupBox_show_lines_clusters.setChecked(self.settings.value("lidar_show_lines_clusters", True).toBool())
+        self.doubleSpinBox_split_threshold.setValue(self.settings.value("lidar_split_threshold", 2.0).toDouble()[0])
+        self.doubleSpinBox_merge_threshold.setValue(self.settings.value("lidar_merge_threshold", 10).toDouble()[0])
+        self.checkBox_show_line_cluster_points.setChecked(self.settings.value("lidar_show_line_cluster_points", True).toBool()) 
+        self.checkBox_show_line_cluster_lines.setChecked(self.settings.value("lidar_show_line_cluster_lines", True).toBool())
 
-        self.plot.addItem(spi)
+    #######################################################
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_DELTA_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_DELTA", value)
 
-    def draw_line(self, info):
-        '''
-        Отображает точки, в формате:{
-            "line":{"pos": Vec2d, "end": Vec2d}
-            "color": (r,g,b,a) - опционально,
-            "width":int - опционально, толщина линии
-        }
-        '''
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_WALL_ANALYSIS_DX_GAP_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_WALL_ANALYSIS_DX_GAP", value)
 
-        line = self.plot.plot([{"x": info["line"]["pos"][0], "y":info["line"]["pos"][1]},
-                        {"x": info["line"]["end"][0], "y":info["line"]["end"][1]}])
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_WALL_ANALYSIS_ANGLE_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_WALL_ANALYSIS_ANGLE", value)        
 
-        if "color" in info :
-            if "width" in info:
-                line.setPen(color=info["color"], width=info["width"])
-            else:
-                line.setPen(color=info["color"])
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_MIN_LIDAR_DISTANCE_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_MIN_LIDAR_DISTANCE", value) 
 
-        #Вместе с текстом
-        if "text" in info:
-            if "color" in info["color"]:
-                text = pg.TextItem(info["text"], color=info["color"])
-            else:
-                text = pg.TextItem(info["text"])
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_MAX_LIDAR_DISTANCE_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_MAX_LIDAR_DISTANCE", value) 
+   
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_TRUSTABLE_LIDAR_DISTANCE_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_TRUSTABLE_LIDAR_DISTANCE", value) 
 
-            text.setPos(info["line"]["pos"][0], info["line"]["pos"][1])
-            self.plot.addItem(text)
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_MIN_GAP_WIDTH_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_MIN_GAP_WIDTH", value) 
 
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_Dr_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_Dr", value) 
 
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_Da_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_Da", value)
+        
+    @pyqtSlot("double")
+    def on_doubleSpinBox_alg_Dh_valueChanged(self, value):
+        self.settings.setValue("lidar_alg_Dh", value)        
 
+    def init_alg_controlls(self):
+        self.doubleSpinBox_alg_DELTA.setValue(self.settings.value("lidar_alg_DELTA", 70.0).toDouble()[0])
+        self.doubleSpinBox_alg_WALL_ANALYSIS_DX_GAP.setValue(self.settings.value("lidar_alg_WALL_ANALYSIS_DX_GAP", 15).toDouble()[0])
+        self.doubleSpinBox_alg_WALL_ANALYSIS_ANGLE.setValue(self.settings.value("lidar_alg_WALL_ANALYSIS_ANGLE", 90).toDouble()[0])
+        self.doubleSpinBox_alg_MIN_LIDAR_DISTANCE.setValue(self.settings.value("lidar_alg_MIN_LIDAR_DISTANCE", 20).toDouble()[0])
+        self.doubleSpinBox_alg_MAX_LIDAR_DISTANCE.setValue(self.settings.value("lidar_alg_MAX_LIDAR_DISTANCE", 600).toDouble()[0])
+        self.doubleSpinBox_alg_TRUSTABLE_LIDAR_DISTANCE.setValue(self.settings.value("lidar_alg_TRUSTABLE_LIDAR_DISTANCE", 400).toDouble()[0])
+        self.doubleSpinBox_alg_MIN_GAP_WIDTH.setValue(self.settings.value("lidar_alg_MIN_GAP_WIDTH", 50).toDouble()[0])
+        self.doubleSpinBox_alg_Dr.setValue(self.settings.value("lidar_alg_Dr", 30).toDouble()[0])
+        self.doubleSpinBox_alg_Da.setValue(self.settings.value("lidar_alg_Da", 0.1).toDouble()[0])
+        self.doubleSpinBox_alg_Dh.setValue(self.settings.value("lidar_alg_Dh", 0.70).toDouble()[0])
 
-    def draw_text(self, info):
-        '''
-        Отображает текст в формате:{
-            "text":"",
-            "pos":[x,y]
-            "color": (r,g,b,a) - опционально
-        }
-        '''
-
-        if "color" in info:
-            text = pg.TextItem(info["text"], color=info["color"])
-        else:
-            text = pg.TextItem(info["text"])
-
-        text.setPos(info["pos"][0], info["pos"][1])
-        self.plot.addItem(text)
-
-    def on_new_data(self, data):
-        self.plot.clear()
-        self.label_frame.setText(str(data["frame_number"]))
-
-        #рисуем новые данные
-        for p in data["primetives"]:
-            if "points" in p:
-                self.draw_points(p)
-            elif "line" in p:
-                self.draw_line(p)
-            elif "text" in p:
-                self.draw_text(p)
-
-        if self.first_draw:
-            self.plot.autoRange()
-            self.first_draw = False
-
-
-
+        
 def data_from_server(in_queue):
     client = Client(("192.168.10.154", 8080))
 
