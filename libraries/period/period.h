@@ -4,10 +4,10 @@
 class Period{
     unsigned long st;
     unsigned long duration;
-    float last_dt;
+    unsigned long dt;
 public:
     
-    Period(unsigned long duration_mk):duration(duration_mk), last_dt(0.1) {st = micros();}
+    Period(unsigned long duration_mk):st(micros()), duration(duration_mk) {}
 
     bool is_ready(){
         //проверка выключена
@@ -15,12 +15,11 @@ public:
             return false;
 
         unsigned long ct = micros();
-        unsigned long dt = ct - st;
+        dt = ct - st;
         
         if (dt < duration)
             return false;
 
-        last_dt = dt / 1000000.;
         st = ct - (dt % duration);
         return true;
     }
@@ -30,7 +29,8 @@ public:
     void set_period(unsigned long duration_ms){
         duration = duration_ms;
     }
+    unsigned long get_period() const {return duration;}
 
-    float get_dt() const {return last_dt;}
+    float get_dt() const{return dt / 1000000.0;}
 };
 #endif

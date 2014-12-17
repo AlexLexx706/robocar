@@ -55,7 +55,7 @@ class AlgControls(QtGui.QFrame):
     def control_proc(self):
         while not self.stop_flag:
             angle = self.get_angle()
-            
+            print "!!!!!!!!angle:", angle
             #dвызов управления
             if angle is not None:
 
@@ -109,6 +109,13 @@ class AlgControls(QtGui.QFrame):
     
 
     def init_controls(self):
+        self.doubleSpinBox_period.blockSignals(True)
+        self.doubleSpinBox_MOTION_SPEED_P.blockSignals(True)
+        self.doubleSpinBox_MIN_SPEED.blockSignals(True)
+        self.doubleSpinBox_MAX_SPEED.blockSignals(True)
+        self.doubleSpinBox_MIN_TURN_ANGLE.blockSignals(True)
+        self.doubleSpinBox_turn_p.blockSignals(True)
+
         self.settings.beginGroup("alg")
         self.doubleSpinBox_period.setValue(self.settings.value("period", 0.2).toDouble()[0])
         self.doubleSpinBox_MOTION_SPEED_P.setValue(self.settings.value("MOTION_SPEED_P", 0.06).toDouble()[0])
@@ -118,11 +125,18 @@ class AlgControls(QtGui.QFrame):
         self.doubleSpinBox_turn_p.setValue(self.settings.value("turn_p", 1.12).toDouble()[0])
         self.settings.endGroup()
 
+        self.doubleSpinBox_period.blockSignals(False)
+        self.doubleSpinBox_MOTION_SPEED_P.blockSignals(False)
+        self.doubleSpinBox_MIN_SPEED.blockSignals(False)
+        self.doubleSpinBox_MAX_SPEED.blockSignals(False)
+        self.doubleSpinBox_MIN_TURN_ANGLE.blockSignals(False)
+        self.doubleSpinBox_turn_p.blockSignals(False)
+
 if __name__ == '__main__':
     import logging
     import sys
-    logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s%(message)s', level=logging.INFO)
-    logging.getLogger("PyQt4").setLevel(logging.INFO)
+    #logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s%(message)s', level=logging.INFO)
+    #logging.getLogger("PyQt4").setLevel(logging.INFO)
     
     app = QtGui.QApplication(sys.argv)
     class xxx:

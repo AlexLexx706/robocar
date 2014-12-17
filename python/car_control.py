@@ -357,26 +357,14 @@ def set_direction_move(protocol, angle, async=True, motion_p=MOTION_SPEED_P, min
 			protocol.set_offset(max_speed)
 #			time.sleep(.3)
 
-		output_states()
+		rwlm.output_states(STATES)
 				
 #		Af = a
 		
 		return move(protocol, angle, motion_p, min_speed, max_speed, min_turn_angle)
 
-last_os_call = time.time()
-def output_states():
-	global last_os_call
-	if time.time() - last_os_call < .05:
-		return
-
-#	print 'outputting states'
-
-	loggers.logOut(' '.join(STATES.values()))
-#	sys.stdout.write("\r%s %150s" % (time.strftime('%H:%M:%S'), ' '.join(STATES.values())))
-	last_os_call = time.time()
-
 def check_return_rc_control():
-	output_states()
+	rwlm.output_states(STATES)
 	if EMULATE_MAV:
 		return False
 
@@ -455,7 +443,7 @@ def wait_heartbeat(m):
 @pu.functionThreader
 #@pu.functionProcessWrapper
 def lidar_data_visualize(queue):
-		from LidarFrame import main
+		from lidar_frame.lidar_frame import main
 		main(queue)
 
 def set_car_motion_speed(protocol, angle, p=MOTION_SPEED_P, min_speed=MIN_SPEED, max_speed=MAX_SPEED, min_turn_angle=MIN_TURN_ANGLE):
@@ -519,7 +507,7 @@ def control(rpi_host, iter_num=10000000, max_queue_size=None):
 	
 			decisions = None
 			decisions = rwlm.move(lidar_data, lidar_cluster_list)
-			output_states()	
+			rwlm.output_states(STATES)	
 			if decisions is None:
 				continue
 
@@ -530,7 +518,7 @@ def control(rpi_host, iter_num=10000000, max_queue_size=None):
 			
 			speed = set_direction_move(CAR_CONTROLLER, angle, ASYNC_TURNS)
 			plot_data(600*speed, angle+pi/2, decisions['primitives'])
-			output_states()	
+			rwlm.output_states(STATES)	
 
 
 def get_mavlink_modem_connection(dev_num):
@@ -825,7 +813,6 @@ def oscillation_test(rpi_host, a=pi/2, async=True):
 		
 
 if __name__ == "__main__":
-
 #loggers.configureRotatingFileLogger(sys.argv[1])
 	loggers.configureRotatingFileLogger(sys.argv[1], minLogLevel=loggers.INFO, fileLogLevel=loggers.DEBUG)
 #loggers.configureRotatingFileLogger(sys.argv[1], minLogLevel=loggers.DEBUG, fileLogLevel=loggers.DEBUG)

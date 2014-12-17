@@ -10,10 +10,9 @@ class LabelExt(QtGui.QLabel):
     move_camera = pyqtSignal('QPoint')
 
     def __init__(self, parent=None):
-        super(QtGui.QLabel, self).__init__(parent)
+        QtGui.QLabel.__init__(self, parent)
         self.setMouseTracking(False)
         self.s_pos = None
-        #self.move_camera.connect(self.on_move_camera)
     
     def mouseMoveEvent(self, event):
         QtGui.QLabel.mouseMoveEvent(self, event)

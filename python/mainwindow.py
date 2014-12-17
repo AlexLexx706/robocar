@@ -1,4 +1,6 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
+
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
@@ -7,11 +9,12 @@ import pyqtgraph as pg
 import numpy as np
 import math
 from robot_scene.robot_scene import RobotScene
-from LidarFrame import LidarFrame
+from lidar_frame.lidar_frame import LidarFrame
 import Queue
 import random
 import time
 from alg_controls import AlgControls
+import os
 
 
 class MainWindow(QtGui.QMainWindow):
@@ -27,7 +30,7 @@ class MainWindow(QtGui.QMainWindow):
     
     def __init__(self, parent=None):
         super(QtGui.QWidget, self).__init__(parent)
-        uic.loadUi("main_window.ui", self)
+        uic.loadUi(os.path.join(os.path.split(__file__)[0], "main_window.ui"), self)
         self.settings = QtCore.QSettings("AlexLexx", "car_controlls")
         
         self.read_protocol_res_thread = threading.Thread(target=self.read_protocol_res)
@@ -39,7 +42,6 @@ class MainWindow(QtGui.QMainWindow):
         #Добавим контроль алгоритма
         self.alg_control = AlgControls(self.settings, self.protocol)
         self.tabWidget.addTab(self.alg_control, u"Алгоритм уравления")
-
 
         self.lineEdit_speed.setText(self.settings.value("speed", "115200").toString())
         self.spinBox_port_name.setValue(self.settings.value("port", 6).toInt()[0])
@@ -54,8 +56,6 @@ class MainWindow(QtGui.QMainWindow):
 
         self.set_left_wheel_power(self.settings.value("left_wheel_power", 0).toDouble()[0])
         self.set_right_wheel_power(self.settings.value("right_wheel_power", 0).toDouble()[0])
-        self.checkBox_enable_key_controll.setCheckState(QtCore.Qt.Checked if self.settings.value("enable_key_controll", True).toBool()
-            else QtCore.Qt.Unchecked)
 
         self.spinBox_socket_port.setValue(self.settings.value("socket_port", 1111).toInt()[0])
         self.lineEdit_socket_host.setText(self.settings.value("socket_host", "192.168.0.91").toString())
@@ -93,23 +93,91 @@ class MainWindow(QtGui.QMainWindow):
 
         self.wheel_timer = QtCore.QTimer()
         self.wheel_timer.timeout.connect(self.on_update_wheels)
-        self.wheel_timer.setInterval(300)
+        self.wheel_timer.setInterval(200)
         self.wheel_timer.setSingleShot(False)
-        self.l = 0.0
-        self.r = 0.0
-        self.use_giro_control = True
         
         #добавим лидар
         self.lidar_frame = LidarFrame(self.settings, self)
         
         #Добавим функцию управления
-        self.lidar_frame.update_control_angle = self.alg_control.update_angle
+        self.lidar_frame.alg_controls.update_control_angle = self.alg_control.update_angle
         
         self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
-        self.lidar_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
-        self.lidar_frame.label_video.move_camera.connect(self.on_move_camera)
-        self.lidar_frame.label_video.addAction(self.action_reset_camera)
+        self.tabWidget_2.setCurrentWidget(self.lidar_frame)
+
+        self.lidar_frame.video_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
+        self.lidar_frame.video_frame.label_video.move_camera.connect(self.on_move_camera)
+        self.lidar_frame.video_frame.label_video.addAction(self.action_reset_camera)
         self.dos_stop_flag = True
+        self.init_controls()
+        self.readSettings()
+        self.lidar_frame.readSettings()
+
+    def closeEvent(self, event):
+        event.accept()
+        self.writeSettings()
+        self.lidar_frame.writeSettings()
+
+    def writeSettings(self):
+        self.settings.beginGroup("windows_geometry")
+        self.settings.beginGroup("main_window")
+        self.settings.setValue("size", self.size())
+        self.settings.setValue("pos", self.pos())
+        self.settings.endGroup()
+
+        self.settings.beginGroup("splitter_2")
+        self.settings.setValue("sizes", self.splitter_2.sizes())
+        self.settings.endGroup()
+
+        self.settings.endGroup()
+
+    def readSettings(self):
+        self.settings.beginGroup("windows_geometry")
+
+        self.settings.beginGroup("main_window")
+        self.resize(self.settings.value("size", QtCore.QSize(400, 400)).toSize())
+        self.move(self.settings.value("pos", QtCore.QPoint(200, 200)).toPoint())
+        self.settings.endGroup()
+
+        self.settings.beginGroup("splitter_2")
+        self.splitter_2.setSizes([int(v) for v in self.settings.value("sizes", [100, 100]).toPyObject()])
+        self.settings.endGroup()
+
+        self.settings.endGroup()
+
+
+
+    def init_controls(self):
+        self.settings.beginGroup("button_control")
+        self.doubleSpinBox_button_offset.setValue(self.settings.value("offset", 0.5).toDouble()[0])
+        self.doubleSpinBox_button_angle.setValue(self.settings.value("angle", math.pi / 180. * 30).toDouble()[0])
+        self.doubleSpinBox_button_angle_speed.setValue(self.settings.value("speed", math.pi / 2).toDouble()[0])
+        self.checkBox_enable_buttons_control.setChecked(self.settings.value("enable", True).toBool())
+        self.settings.endGroup()
+    
+    @pyqtSlot('double')
+    def on_doubleSpinBox_button_offset_valueChanged(self, value):
+        self.settings.beginGroup("button_control");
+        self.settings.setValue("offset", value)
+        self.settings.endGroup()
+
+    @pyqtSlot('double')
+    def on_doubleSpinBox_button_angle_valueChanged(self, value):
+        self.settings.beginGroup("button_control");
+        self.settings.setValue("angle", value)
+        self.settings.endGroup()
+
+    @pyqtSlot('double')
+    def on_doubleSpinBox_button_angle_speed_valueChanged(self, value):
+        self.settings.beginGroup("button_control");
+        self.settings.setValue("speed", value)
+        self.settings.endGroup()
+        
+    @pyqtSlot(bool)
+    def on_checkBox_enable_buttons_control_toggled(self, state):
+        self.settings.beginGroup("button_control");
+        self.settings.setValue("enable", state)
+        self.settings.endGroup()
     
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.KeyPress:
@@ -244,84 +312,31 @@ class MainWindow(QtGui.QMainWindow):
         self.set_servo_1_angle(self.camera_start_pos[1] - int(pos.y() * k))
    
     def update_car_controll(self):
-        if self.is_enable_key_controll():
-            #используем гиро контроль
-            if not self.use_giro_control:
-                self.on_update_wheels_2()
-                self.wheel_timer.stop()
+        if self.checkBox_enable_buttons_control.isChecked():
+            self.on_update_wheels()
+            self.wheel_timer.stop()
 
-                if self.kay_states[self.KEY_A] or self.kay_states[self.KEY_D]:
-                    self.wheel_timer.start()
-            else:
-                #print self.kay_states
-                self.l = 0.0
-                self.r = 0.0
-                max_speed = 0.6
-                rotate_koef = 0.6
-                
-                #вперёд
-                if self.kay_states[self.KEY_W]:
-                    self.l = max_speed
-                    self.r = max_speed
-                #назад
-                elif self.kay_states[self.KEY_S]:
-                    self.l = -max_speed
-                    self.r = -max_speed
-
-                #лево
-                if self.kay_states[self.KEY_A]:
-                    if self.kay_states[self.KEY_W]:
-                        self.l = 0
-                    elif  self.kay_states[self.KEY_S]:
-                        self.l = 0
-                    else:
-                        self.r = max_speed * rotate_koef
-                        self.l = -max_speed * rotate_koef
-                #право
-                if self.kay_states[self.KEY_D]:
-                    if self.kay_states[self.KEY_W]:
-                        self.r = 0
-                    elif self.kay_states[self.KEY_S]:
-                        self.r = 0
-                    else:
-                        self.r = -max_speed * rotate_koef
-                        self.l = max_speed * rotate_koef
-
-                self.on_update_wheels()
-                self.wheel_timer.stop()
-
-                if self.r != 0 or self.l != 0:
-                    self.wheel_timer.start()
-
+            if self.kay_states[self.KEY_A] or self.kay_states[self.KEY_D]:
+                self.wheel_timer.start()
        
     def on_update_wheels(self):
-        if not self.use_giro_control:
-            self.protocol.set_left_wheel_power(self.l)
-            self.protocol.set_right_wheel_power(self.r)
-        #используем гиро контроль
-        else:
-            angle = math.pi/180. * 20
-            angle_speed=math.pi/ 180. * 80.
-            power = 0.8
-            
-            if self.kay_states[self.KEY_A]:
-                self.protocol.turn(angle, angle_speed=angle_speed, no_wait=True)
-                        
-            elif self.kay_states[self.KEY_D]:
-                self.protocol.turn(-angle, angle_speed=angle_speed, no_wait=True)
-
-            if self.kay_states[self.KEY_W]:
-                self.protocol.set_offset(power)
-            elif self.kay_states[self.KEY_S]:
-                self.protocol.set_offset(-power)
-            else:
-                self.protocol.set_offset(0)        
-
-      
+        angle = self.doubleSpinBox_button_angle.value()
+        angle_speed = self.doubleSpinBox_button_angle_speed.value()
+        power = self.doubleSpinBox_button_offset.value()
         
-    def is_enable_key_controll(self):
-        return self.checkBox_enable_key_controll.isChecked()
-    
+        if self.kay_states[self.KEY_A]:
+            self.protocol.turn(angle, angle_speed=angle_speed, no_wait=True)
+                    
+        elif self.kay_states[self.KEY_D]:
+            self.protocol.turn(-angle, angle_speed=angle_speed, no_wait=True)
+
+        if self.kay_states[self.KEY_W]:
+            self.protocol.set_offset(power)
+        elif self.kay_states[self.KEY_S]:
+            self.protocol.set_offset(-power)
+        else:
+            self.protocol.set_offset(0)        
+
     @pyqtSlot(int)
     def on_checkBox_enable_key_controll_stateChanged(self, state):
         self.settings.setValue("enable_key_controll", state == QtCore.Qt.Checked)
@@ -343,7 +358,6 @@ class MainWindow(QtGui.QMainWindow):
     def on_action_clear_triggered(self, v):
         self.plainTextEdit_log.clear()
 
-    ###########################################
     @pyqtSlot("int")
     def on_horizontalSlider_left_wheel_valueChanged(self, value):
         self.set_left_wheel_power(-1 + value / float(self.horizontalSlider_left_wheel.maximum()) * 2.0)
@@ -367,7 +381,6 @@ class MainWindow(QtGui.QMainWindow):
     def get_left_wheel_power(self):
         return self.doubleSpinBox_left_wheel.value()
 
-    ##########################################################
     @pyqtSlot("int")
     def on_horizontalSlider_right_wheel_valueChanged(self, value):
         self.set_right_wheel_power(-1 + value / float(self.horizontalSlider_right_wheel.maximum()) * 2.0)
@@ -391,7 +404,6 @@ class MainWindow(QtGui.QMainWindow):
     def get_right_wheel_power(self):
         return self.doubleSpinBox_right_wheel.value()
 
-    ######################################################################
     @pyqtSlot()
     def on_lineEdit_text_editingFinished(self):
         self.protocol.write(str(self.lineEdit_text.text()))
@@ -597,7 +609,6 @@ class MainWindow(QtGui.QMainWindow):
             return 1
         return 2
 
-
     @pyqtSlot("int")
     def on_horizontalSlider_speed_valueChanged(self, value):
         self.protocol.set_wheel_speed(self.get_wheel_id(), value)
@@ -623,3 +634,17 @@ class MainWindow(QtGui.QMainWindow):
     @pyqtSlot("QString")
     def on_lineEdit_socket_host_textChanged(self, text):
         self.settings.setValue("socket_host", text)
+
+if __name__ == '__main__':
+    import sys
+    import res
+    import logging
+    
+    logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s%(message)s', level=logging.DEBUG)
+    logging.getLogger("PyQt4").setLevel(logging.INFO)
+    
+    app = QtGui.QApplication(sys.argv)
+    widget = MainWindow()
+    app.installEventFilter(widget)
+    widget.show()
+    sys.exit(app.exec_())

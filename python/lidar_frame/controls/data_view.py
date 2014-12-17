@@ -1,10 +1,16 @@
 #!/usr/bin/python 
 # -*- coding: utf-8 -*-
 from PyQt4 import QtCore, QtGui, uic
+from lidar.Vec2d import Vec2d
 import logging
+
 logger = logging.getLogger(__name__)
 
 class DataView(QtGui.QFrame):
+    X_STEP = 10.0
+    Y_STEP = 10.0
+    SHOW_GRID = False
+
     def __init__(self, *args):
         QtGui.QFrame.__init__(self, *args)
         self.data = None
@@ -12,10 +18,8 @@ class DataView(QtGui.QFrame):
         self.matrix = QtGui.QTransform()
         self.matrix.translate(100, 100)
         
-        #data = {"primetives":[{"line":{"pos": [10,10], "end": [50, 30]}, "width": 5,"color":(255, 0, 0)},
-        #               {"text": u"Привет как дела", "pos":[50, 10], "color": (0,255,0)}]}
-        data = {"primetives":[{'color': (255, 255, 0), 'width': 1, 'line': {'end': (-15, 70), 'pos': (-15, 0)}},
-            {'color': (255, 255, 0), 'width': 1, 'line': {'end': (15, 70), 'pos': (15, 0)}}, {'color': (255, 0, 0), 'width': 1, 'line': {'end': (-8.666136333389492, 11.50035134468102), 'pos': (-4.210152548007408, 13.770788485867712)}}]}
+        data = {"primetives":[{"line":{"pos": [10,10], "end": [50, 30]}, "width": 5,"color":(255, 0, 0)},
+                              {"text": u"Привет как дела", "pos":[50, 10], "color": (0,255,0)}]}
         
         
         self.draw_data(data)
@@ -75,14 +79,42 @@ class DataView(QtGui.QFrame):
         painter.restore()
     
     def draw_grid(self, painter):
-        painter.setPen(QtGui.QColor(255, 255, 255))
+        painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(255, 255, 255)), 0.5))
+        X_STEP = 10.0
+        Y_STEP = 10.0
+
         p1 = QtCore.QPointF(-10000, 0)
         p2 = QtCore.QPointF(10000, 0)
+        
+        start_grid = [-1000.0, -1000.0]
+        stop_grid = [1000.0, 1000.0]
+
+        if self.SHOW_GRID:
+            #линии по x
+            for i in range(int((stop_grid[0] - start_grid[0]) / self.X_STEP)):
+                p1 = QtCore.QPointF(start_grid[0] + i * self.X_STEP, -start_grid[1])
+                p2 = QtCore.QPointF(start_grid[0] + i * self.X_STEP, -stop_grid[1])
+                painter.drawLine(self.matrix.map(p1), self.matrix.map(p2))
+
+            #линии по y
+            for i in range(int((stop_grid[1] - start_grid[1]) / self.Y_STEP)):
+                p1 = QtCore.QPointF(start_grid[0], -(start_grid[1] + i * self.Y_STEP))
+                p2 = QtCore.QPointF(stop_grid[0], -(start_grid[1] + i * self.Y_STEP))
+                painter.drawLine(self.matrix.map(p1), self.matrix.map(p2))
+
+        painter.setPen(QtGui.QPen(QtGui.QBrush(QtGui.QColor(255, 255, 255)), 1))
+        p1 = QtCore.QPointF(start_grid[0], 0)
+        p2 = QtCore.QPointF(stop_grid[0], 0)
         painter.drawLine(self.matrix.map(p1), self.matrix.map(p2))
 
-        p1 = QtCore.QPointF(0, -10000)
-        p2 = QtCore.QPointF(0, 10000)
+        p1 = QtCore.QPointF(0, -start_grid[1])
+        p2 = QtCore.QPointF(0, -stop_grid[0])
         painter.drawLine(self.matrix.map(p1), self.matrix.map(p2))
+
+
+        # p1 = QtCore.QPointF(0, -10000)
+        # p2 = QtCore.QPointF(0, 10000)
+        # painter.drawLine(self.matrix.map(p1), self.matrix.map(p2))
     
     def draw(self, painter):
         if self.data is not None and "primetives" in self.data and self.data["primetives"] is not None:
