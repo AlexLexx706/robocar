@@ -36,6 +36,7 @@ class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
                             data = json.loads(self.read(size)) if self.server.serialization == "json" else msgpack.unpackb(self.read(size), encoding='utf-8')
                             cmd, params = data
 
+                            self.server.instance.handler = self
                             res = getattr(self.server.instance, cmd)(*params)
                             packet = json.dumps(res) if self.server.serialization == "json" else msgpack.packb(res, use_bin_type=True)
 

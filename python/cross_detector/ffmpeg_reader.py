@@ -123,9 +123,10 @@ class FFmpegReader:
         try:
             logger.info("->")
             if self.nc_proc is not None:
-                self.nc_proc.stdout.close()
-                self.proc.wait()
-            elif self.proc is not None:
+                #self.nc_proc.stdout.close()
+                #self.proc.wait()
+                self.nc_proc.terminate()
+            if self.proc is not None:
                 self.proc.terminate()
         finally:
             logger.info("<-")

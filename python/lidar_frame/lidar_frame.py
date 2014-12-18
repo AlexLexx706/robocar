@@ -33,7 +33,7 @@ class LidarFrame(QtGui.QFrame):
         self.tabWidget.addTab(self.alg_controls, u"Алгоритм")
         
         self.data_view = DataView()
-        self.video_frame = VideoFrame()
+        self.video_frame = VideoFrame(self.settings)
         
         self.splitter.addWidget(self.data_view)
         self.splitter.addWidget(self.video_frame)
