@@ -51,6 +51,7 @@ class AlgControls(QtGui.QGroupBox):
         self.doubleSpinBox_Dr.setValue(self.settings.value("Dr", 30).toDouble()[0])
         self.doubleSpinBox_Da.setValue(self.settings.value("Da", 0.1).toDouble()[0])
         self.doubleSpinBox_Dh.setValue(self.settings.value("Dh", 0.70).toDouble()[0])
+        self.doubleSpinBox_MIN_GAP_ANGLE.setValue(self.settings.value("MIN_GAP_ANGLE", 0.0628).toDouble()[0])
         self.settings.endGroup()
 
         self.blockSignals(False)
@@ -69,6 +70,7 @@ class AlgControls(QtGui.QGroupBox):
 
     def draw_alg(self, data):
         if self.isChecked() and data is not None:
+            right_wall_lidar_motion.MIN_GAP_ANGLE = self.doubleSpinBox_MIN_GAP_ANGLE.value()
             right_wall_lidar_motion.DELTA = self.doubleSpinBox_DELTA.value()
             right_wall_lidar_motion.WALL_ANALYSIS_DX_GAP = self.doubleSpinBox_WALL_ANALYSIS_DX_GAP.value()
             right_wall_lidar_motion.WALL_ANALYSIS_ANGLE = int(self.doubleSpinBox_WALL_ANALYSIS_ANGLE.value())
@@ -166,4 +168,10 @@ class AlgControls(QtGui.QGroupBox):
         self.settings.beginGroup("lidar_alg")
         self.settings.setValue("Dh", value)        
         self.settings.endGroup()
+        
+    @pyqtSlot("double")
+    def on_doubleSpinBox_MIN_GAP_ANGLE_valueChanged(self, value):
+        self.settings.beginGroup("lidar_alg")
+        self.settings.setValue("MIN_GAP_ANGLE", value)
+        self.settings.endGroup()    
 

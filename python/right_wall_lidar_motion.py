@@ -17,10 +17,13 @@ MIN_CLUSTER_LEN = 1
 
 MIN_GAP_WIDTH = 50 # Минимальная ширина прохода в см
 MIN_RAD_GAP_WIDTH = 3 # Минимальная "радиальная" ширина прохода в см (по длине сектора)
-MIN_GAP_ANGLE = pi/90 # Минимальная угловая ширина прохода в радианах
+MIN_GAP_ANGLE = .1 # Минимальная угловая ширина прохода в радианах
 
 AVOID_WALLS = True
 AVOID_WALLS = False
+
+ABSOLUTE_WALL_AVOIDANCE = True
+#ABSOLUTE_WALL_AVOIDANCE = False
 
 #Df = delta # Расстояние до передней стенки, в метрах
 Dr = 15 # Расстояние до правой стенки, в см
@@ -145,89 +148,91 @@ def move(lidar_data, lidar_clusters=None):
 
 #			return set_direction_move(x, y, (anti_norm_angle%pi)*2, False)
 
-	res_angle = 2*pi
-	max_dist = MIN_LIDAR_DISTANCE
-		
+	MAX_RES_ANGLE = 2*pi
+	if result is None:
+		res_angle = MAX_RES_ANGLE
+		max_dist = MIN_LIDAR_DISTANCE
+			
 
-	states['control'] = "Moving forward"
-	if lidar_clusters==None:
-		states['control'] = "lidar_clusters==None. Calculating clusters..."
-		lidar_clusters = get_clusters(lidar_data)
+		states['control'] = "Moving forward"
+		if lidar_clusters==None:
+			states['control'] = "lidar_clusters==None. Calculating clusters..."
+			lidar_clusters = get_clusters(lidar_data)
 
 #	print 'lidar_clusters:', lidar_clusters
-	lidar_clusters_len = len(lidar_clusters)
+		lidar_clusters_len = len(lidar_clusters)
 #	states['control'] = "lidar_clusters_len: %d"%lidar_clusters_len
-	
-	selected_gate = None
-	selected_gate_vec = None
-	selected_gate_start = None
-	selected_gate_width = 0
-	for i in range(-1, lidar_clusters_len-1):
-		cluster1 = lidar_clusters[i]
-		cluster2 = lidar_clusters[i+1]
+		
+		selected_gate = None
+		selected_gate_vec = None
+		selected_gate_start = None
+		selected_gate_width = 0
+		for i in range(-1, lidar_clusters_len-1):
+			cluster1 = lidar_clusters[i]
+			cluster2 = lidar_clusters[i+1]
 
-		gate = (cluster1[-1], cluster2[0])
-		start, stop = gate 
-		angles_deg = (start.get_angle(), stop.get_angle()) # %360
-		angles = map(lambda x: radians(x)%(2*pi), angles_deg)
-		gate_dists = map(lambda x: x.get_length(), gate)
+			gate = (cluster1[-1], cluster2[0])
+			start, stop = gate 
+			angles_deg = (start.get_angle(), stop.get_angle()) # %360
+			angles = map(lambda x: radians(x)%(2*pi), angles_deg)
+			gate_dists = map(lambda x: x.get_length(), gate)
 
-#		valid_angles = filter(lambda a: 0<=a<=3*pi/4, angles)
-#		if len(valid_angles)<1:
-#			states['control'] = "No valid angles: %s"%angles
+			valid_angles = filter(lambda a: 0<=a<=pi, angles) # 3*pi/2
+			if len(valid_angles)<1:
+				states['control'] = "No valid angles: %s"%angles
 #			print "No valid angles:", angles
-#			continue
+				continue
 
-		gate_vec = stop-start
-		gate_width = gate_vec.get_length()
-		if gate_width<MIN_GAP_WIDTH:
+			gate_vec = stop-start
+			gate_width = gate_vec.get_length()
+			if gate_width<MIN_GAP_WIDTH:
 #			print "Gate width %d not valid"%gate_width
 #			states['control'] = "Gate (%d,%d) not valid"%(gate_width, angle)
-			continue
+				continue
 
-		gate_sector = angles[0] - angles[1]
+			gate_sector = angles[0] - angles[1]
 
-		gate_dist = min(gate_dists)
-		min_dist_idx = gate_dists.index(gate_dist)
-		min_dist_angle = angles[min_dist_idx]
-		max_dist_angle = angles[1-min_dist_idx]
+			gate_dist = min(gate_dists)
+			min_dist_idx = gate_dists.index(gate_dist)
+			min_dist_angle = angles[min_dist_idx]
+			max_dist_angle = angles[1-min_dist_idx]
 #		gate_dists[angles.index(min_dist_angle)]
 
-		if abs(gate_sector)<MIN_GAP_ANGLE:
+			if abs(gate_sector)<MIN_GAP_ANGLE:
 #		if gate_sector*gate_dist<MIN_RAD_GAP_WIDTH:
 #			print "Gate sector %1.2f too narrow!"%gate_sector
 #			states['control'] = "Gate (%d,%d) not valid"%(gate_width, angle)
-			continue
+				continue
 
 
-		gap_dir = max_dist_angle - min_dist_angle
-#		angle = min_dist_angle + copysign(Dr/gate_dist, gap_dir)
-		angle = (max_dist_angle + min_dist_angle)/2
+			gap_dir = max_dist_angle - min_dist_angle
+			angle = min_dist_angle + copysign(Dr/gate_dist, gap_dir)
+#			angle = (max_dist_angle + min_dist_angle)/2
 
 #		print "angles:", angles, 'gate_dist:', gate_dist, 'angle:', angle
 
-		states['control'] = "Found valid gate"
-		dist = MAX_LIDAR_DISTANCE # max((point.get_length() for point in gate))
-		if max_dist<dist or (dist==max_dist and angle<res_angle):
+			states['control'] = "Found valid gate"
+			dist = MAX_LIDAR_DISTANCE # max((point.get_length() for point in gate))
+			if max_dist<dist or (dist==max_dist and angle<res_angle):
 #			print 'angles:', angles, 'min_dist_angle:', min_dist_angle
-			max_dist = dist
-			res_angle = angle
-			angle_shift_sign = gap_dir
-			selected_gate_dist = gate_dist
-			selected_gate_width = gate_width
-			selected_gate = gate
-			selected_gate_vec = gate_vec
-			selected_gate_start = start
+				max_dist = dist
+				res_angle = angle
+				angle_shift_sign = gap_dir
+				selected_gate_dist = gate_dist
+				selected_gate_width = gate_width
+				selected_gate = gate
+				selected_gate_vec = gate_vec
+				selected_gate_start = start
 
 #			print "angles:", angles, "angle:", angle
 #			print "valid angles:", valid_angles
 	
 #	states['control'] = "Checking res_angle"
-	if res_angle!=None:
+	if ABSOLUTE_WALL_AVOIDANCE:
 		'Корректировка курса, если он пересекается с другими точками в заданном прямоугольнике'
 
 		states['control'] = "res_angle!=None"
-		corr_angle = res_angle
+		corr_angle = res_angle if res_angle<2*pi else pi/2 # pi/2 - движение прямо, в случае если нет проходов
 		intersect_points = []
 		for cl in lidar_clusters:
 			for point in cl:
@@ -265,16 +270,18 @@ def move(lidar_data, lidar_clusters=None):
 		states['control'] = "Going to gate angle %1.2f. Gate width: %1.2f"%(control_angle, selected_gate_width/100)
 
 #		pdb.set_trace()
-		primitives.extend([{
-						"points": selected_gate,
-						"color": (255, 0, 255, 125),
-						"size": 10
-				},])
-
 		if selected_gate_vec != None:
-			result = {'turn_angle': control_angle, 'primitives': primitives, 'states': states}
-	else:
-		result = {'turn_angle': 0, 'states': states}
+			primitives.extend([{
+							"points": selected_gate,
+							"color": (255, 0, 255, 125),
+							"size": 10
+					},])
+
+#		if selected_gate_vec != None:
+		result = {'turn_angle': control_angle, 'primitives': primitives, 'states': states}
+#	else:
+#		states['control'] = "We are at the dead end. Going backwards"
+#		result = {'turn_angle': pi, 'states': states}
 
 	output_states(states)
 	return result

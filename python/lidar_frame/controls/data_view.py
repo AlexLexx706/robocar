@@ -36,11 +36,11 @@ class DataView(QtGui.QFrame):
             self.update()
 
     def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.MidButton:
+        if event.button() == QtCore.Qt.LeftButton:
             self.press_pos = event.pos()
 
     def mouseReleaseEvent(self, event):
-        if event.button() == QtCore.Qt.MidButton:
+        if event.button() == QtCore.Qt.LeftButton:
             self.press_pos = None
 
     def wheelEvent(self, event):

@@ -1,8 +1,6 @@
 #!/usr/bin/python
 # coding: utf-8
 
-print 'Script begin'
-
 # Система управления
 import sys, time, collections as coll, pdb
 
@@ -19,8 +17,6 @@ import loggers
 import procUtils as pu
 from launcher import getTxtArgsCmd
 import os
-
-print 'Script imports passed'
 
 PROFILE = False
 #PROFILE = True
@@ -75,7 +71,7 @@ MIN_TURN_ANGLE = pi/36
 MAIN_CYCLE_SLEEP = .2
 #WALL_ROUNDING_ANGLE = DEFAULT_WALL_ROUNDING_ANGLE_STEP
 
-TURN_SPEED_P = 1.12
+TURN_SPEED_P = 1.17
 MOTION_SPEED_P = .06
 
 ASYNC_TURNS = False
@@ -242,11 +238,13 @@ def turn_to(protocol, a, async, p=TURN_SPEED_P, min_turn_angle=MIN_TURN_ANGLE, c
 #		set_control_state()
 		turn_angle = 0
 		loggers.logDbg('Turning to %1.2f...'%control_angle)
-		if control_move_dir and min_turn_angle<abs(control_angle):
+		if min_turn_angle<abs(control_angle):
 			loggers.logDbg('before CAR_CONTROLLER.turn')
 #			CAR_CONTROLLER.turn(control_angle, .7*pi, False)
 			turn_speed = p*abs(control_angle)
-			turn_angle = protocol.turn(control_angle, turn_speed, async)
+			STATES['turn_speed'] = 'Turn speed: %1.2f'%turn_speed
+			if control_move_dir:
+				turn_angle = protocol.turn(control_angle, turn_speed, async)
 #			time.sleep(1)
 			loggers.logDbg('after CAR_CONTROLLER.turn')
 
@@ -448,7 +446,7 @@ def lidar_data_visualize(queue):
 
 def set_car_motion_speed(protocol, angle, p=MOTION_SPEED_P, min_speed=MIN_SPEED, max_speed=MAX_SPEED, min_turn_angle=MIN_TURN_ANGLE):
 	speed = min_speed+p/abs(angle) if min_turn_angle<abs(angle) else max_speed
-	STATES['speed'] = 'Motion speed: %1.2f'%speed
+	STATES['motion_speed'] = 'Motion speed: %1.2f'%speed
 	if CONTROL_MOVE_DIR: 
 		protocol.set_offset(speed)
 
@@ -517,7 +515,7 @@ def control(rpi_host, iter_num=10000000, max_queue_size=None):
 #			print "line count: ", len([p for p in primitives if "line" in p]), "!!!!!!!!!!"
 			
 			speed = set_direction_move(CAR_CONTROLLER, angle, ASYNC_TURNS)
-			plot_data(600*speed, angle+pi/2, decisions['primitives'])
+			plot_data(600*speed, angle+pi/2, decisions.get('primitives', []))
 			rwlm.output_states(STATES)	
 
 

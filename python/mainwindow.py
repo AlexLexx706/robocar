@@ -1,18 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
+import res
 from PyQt4 import QtCore, QtGui, uic
 from PyQt4.QtCore import pyqtSlot, pyqtSignal
 import threading
 from car_controll.protocol import Protocol
 import pyqtgraph as pg
-import numpy as np
 import math
 from robot_scene.robot_scene import RobotScene
 from lidar_frame.lidar_frame import LidarFrame
 import Queue
 import random
-import time
 from alg_controls import AlgControls
 import os
 
@@ -105,9 +103,9 @@ class MainWindow(QtGui.QMainWindow):
         self.tabWidget_2.addTab(self.lidar_frame, u"Лидар")
         self.tabWidget_2.setCurrentWidget(self.lidar_frame)
 
-        self.lidar_frame.video_frame.label_video.start_move_camera.connect(self.on_start_move_camera)
-        self.lidar_frame.video_frame.label_video.move_camera.connect(self.on_move_camera)
-        self.lidar_frame.video_frame.label_video.addAction(self.action_reset_camera)
+        self.lidar_frame.video_frame.video_view.start_move_camera.connect(self.on_start_move_camera)
+        self.lidar_frame.video_frame.video_view.move_camera.connect(self.on_move_camera)
+        self.lidar_frame.video_frame.video_view.addAction(self.action_reset_camera)
         self.dos_stop_flag = True
         self.init_controls()
         self.readSettings()
@@ -117,6 +115,11 @@ class MainWindow(QtGui.QMainWindow):
         event.accept()
         self.writeSettings()
         self.lidar_frame.writeSettings()
+        self.lidar_frame.stop()
+
+        #Завершим поток
+        self.protocol_result_queue.put(None)
+        self.read_protocol_res_thread.join()
 
     def writeSettings(self):
         self.settings.beginGroup("windows_geometry")
@@ -212,6 +215,10 @@ class MainWindow(QtGui.QMainWindow):
     def read_protocol_res(self):
         while 1:
             data = self.protocol_result_queue.get()
+
+            if data is None:
+                break
+
             #текст
             if data[0] == 0:
                 self.add_line.emit(data[1])
@@ -637,14 +644,15 @@ class MainWindow(QtGui.QMainWindow):
 
 if __name__ == '__main__':
     import sys
-    import res
     import logging
     
     logging.basicConfig(format='%(levelname)s %(name)s::%(funcName)s%(message)s', level=logging.DEBUG)
     logging.getLogger("PyQt4").setLevel(logging.INFO)
+    logging.getLogger("cross_detector.line_reducer").setLevel(logging.INFO)
+    
     
     app = QtGui.QApplication(sys.argv)
     widget = MainWindow()
     app.installEventFilter(widget)
     widget.show()
-    sys.exit(app.exec_())
+    app.exec_()

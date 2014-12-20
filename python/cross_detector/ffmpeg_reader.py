@@ -99,8 +99,7 @@ class FFmpegReader:
         if len(data) < self.buffer_size:
             return (False, None)
         
-        res = np.fromstring(data, dtype=np.uint8)
-        res.shape = (self.size[1], self.size[0], 3)
+        res = self.to_frame()
 
         if self.cur_time is None:
             self.cur_time = time.time()
@@ -118,6 +117,11 @@ class FFmpegReader:
     
     def read_string(self):
         return self.proc.stdout.read(self.buffer_size)
+    
+    def to_frame(self, data):
+        res = np.fromstring(data, dtype=np.uint8)
+        res.shape = (self.size[1], self.size[0], 3)
+        return res
     
     def release(self):
         try:

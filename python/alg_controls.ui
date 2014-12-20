@@ -14,14 +14,14 @@
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="3" column="0" colspan="2">
+   <item row="2" column="0" colspan="2">
     <widget class="QLabel" name="label_29">
      <property name="text">
       <string>MIN_SPEED:</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="2">
+   <item row="3" column="2">
     <widget class="QDoubleSpinBox" name="doubleSpinBox_MAX_SPEED">
      <property name="decimals">
       <number>4</number>
@@ -34,14 +34,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="2">
-    <widget class="QLabel" name="label_32">
-     <property name="text">
-      <string>PERIOD:</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="2">
+   <item row="5" column="2">
     <widget class="QDoubleSpinBox" name="doubleSpinBox_MIN_TURN_ANGLE">
      <property name="decimals">
       <number>4</number>
@@ -54,7 +47,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="2">
+   <item row="2" column="2">
     <widget class="QDoubleSpinBox" name="doubleSpinBox_MIN_SPEED">
      <property name="decimals">
       <number>4</number>
@@ -67,7 +60,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="2">
+   <item row="1" column="2">
     <widget class="QDoubleSpinBox" name="doubleSpinBox_MOTION_SPEED_P">
      <property name="decimals">
       <number>4</number>
@@ -80,41 +73,28 @@
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
+   <item row="3" column="0">
     <widget class="QLabel" name="label_30">
      <property name="text">
       <string>MAX_SPEED:</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="0" colspan="2">
+   <item row="1" column="0" colspan="2">
     <widget class="QLabel" name="label_28">
      <property name="text">
       <string>MOTION_SPEED_P:</string>
      </property>
     </widget>
    </item>
-   <item row="6" column="0" colspan="2">
+   <item row="5" column="0" colspan="2">
     <widget class="QLabel" name="label_31">
      <property name="text">
       <string>MIN_TURN_ANGLE:</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="2">
-    <widget class="QDoubleSpinBox" name="doubleSpinBox_period">
-     <property name="decimals">
-      <number>4</number>
-     </property>
-     <property name="singleStep">
-      <double>0.010000000000000</double>
-     </property>
-     <property name="value">
-      <double>0.200000000000000</double>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="2">
+   <item row="7" column="2">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
       <enum>Qt::Vertical</enum>
@@ -134,14 +114,14 @@
      </property>
     </widget>
    </item>
-   <item row="7" column="0">
+   <item row="6" column="0">
     <widget class="QLabel" name="label_33">
      <property name="text">
       <string>turn_p:</string>
      </property>
     </widget>
    </item>
-   <item row="7" column="2">
+   <item row="6" column="2">
     <widget class="QDoubleSpinBox" name="doubleSpinBox_turn_p">
      <property name="decimals">
       <number>4</number>

@@ -4,30 +4,36 @@ from PyQt4.QtCore import pyqtSlot, pyqtSignal
 from car_control import set_direction_move
 import threading
 import time
+import os
 
 class AlgControls(QtGui.QFrame):
     def __init__(self, settings, protocol):
         super(QtGui.QFrame, self).__init__()
-        uic.loadUi("alg_controls.ui", self)
+        #uic.loadUi("alg_controls.ui", self)
+        uic.loadUi(os.path.join(os.path.split(__file__)[0], "alg_controls.ui"), self)
+        
         self.settings = settings
         self.protocol = protocol
         self.init_controls()
-        self.lock = threading.Lock()
+        self.cv = threading.Condition()
         self.angle = None
         self.stop_flag = True
     
     def update_angle(self, angle):
-        with self.lock:
+        with self.cv:
             self.angle = angle
+            self.cv.notify()
     
     def get_angle(self):
-        with self.lock:
-            res = self.angle
+        try:
+            with self.cv:
+                while not self.stop_flag and self.angle is None:
+                    self.cv.wait()
+                return self.angle
+        finally:
             self.angle = None
-            return res
-    
+
     def start(self):
-        print "start"
         if self.stop_flag:
             if not self.protocol.is_connected():
                 return
@@ -38,9 +44,11 @@ class AlgControls(QtGui.QFrame):
             self.control_thread.start()
 
     def stop(self):
-        print "stop"
         if not self.stop_flag:
-            self.stop_flag = True
+            with self.cv:
+                self.stop_flag = True
+                self.cv.notify()
+
             self.control_thread.join()
             self.pushButton_start.setText(u"Старт")
 
@@ -55,27 +63,20 @@ class AlgControls(QtGui.QFrame):
     def control_proc(self):
         while not self.stop_flag:
             angle = self.get_angle()
-            print "!!!!!!!!angle:", angle
-            #dвызов управления
-            if angle is not None:
 
-                set_direction_move(self.protocol,
-                                angle,
-                                async=True,
-                                motion_p=self.doubleSpinBox_MOTION_SPEED_P.value(),
-                                min_speed=self.doubleSpinBox_MIN_SPEED.value(),
-                                max_speed=self.doubleSpinBox_MAX_SPEED.value(),
-                                min_turn_angle=self.doubleSpinBox_MIN_TURN_ANGLE.value(),
-                                turn_p=self.doubleSpinBox_turn_p.value())
+            if angle is None:
+                break
 
-            time.sleep(self.doubleSpinBox_period.value())
+            #вызов управления
+            set_direction_move(self.protocol,
+                            angle,
+                            async=True,
+                            motion_p=self.doubleSpinBox_MOTION_SPEED_P.value(),
+                            min_speed=self.doubleSpinBox_MIN_SPEED.value(),
+                            max_speed=self.doubleSpinBox_MAX_SPEED.value(),
+                            min_turn_angle=self.doubleSpinBox_MIN_TURN_ANGLE.value(),
+                            turn_p=self.doubleSpinBox_turn_p.value())
         self.protocol.set_power_zerro()
-
-    @pyqtSlot("double")
-    def on_doubleSpinBox_period_valueChanged(self, value):
-        self.settings.beginGroup("alg")
-        self.settings.setValue("period", value)
-        self.settings.endGroup()
 
     @pyqtSlot("double")
     def on_doubleSpinBox_MOTION_SPEED_P_valueChanged(self, value):
@@ -109,7 +110,6 @@ class AlgControls(QtGui.QFrame):
     
 
     def init_controls(self):
-        self.doubleSpinBox_period.blockSignals(True)
         self.doubleSpinBox_MOTION_SPEED_P.blockSignals(True)
         self.doubleSpinBox_MIN_SPEED.blockSignals(True)
         self.doubleSpinBox_MAX_SPEED.blockSignals(True)
@@ -117,7 +117,6 @@ class AlgControls(QtGui.QFrame):
         self.doubleSpinBox_turn_p.blockSignals(True)
 
         self.settings.beginGroup("alg")
-        self.doubleSpinBox_period.setValue(self.settings.value("period", 0.2).toDouble()[0])
         self.doubleSpinBox_MOTION_SPEED_P.setValue(self.settings.value("MOTION_SPEED_P", 0.06).toDouble()[0])
         self.doubleSpinBox_MIN_SPEED.setValue(self.settings.value("MIN_SPEED", 0.4).toDouble()[0])
         self.doubleSpinBox_MAX_SPEED.setValue(self.settings.value("MAX_SPEED", 0.8).toDouble()[0])
@@ -125,7 +124,6 @@ class AlgControls(QtGui.QFrame):
         self.doubleSpinBox_turn_p.setValue(self.settings.value("turn_p", 1.12).toDouble()[0])
         self.settings.endGroup()
 
-        self.doubleSpinBox_period.blockSignals(False)
         self.doubleSpinBox_MOTION_SPEED_P.blockSignals(False)
         self.doubleSpinBox_MIN_SPEED.blockSignals(False)
         self.doubleSpinBox_MAX_SPEED.blockSignals(False)
