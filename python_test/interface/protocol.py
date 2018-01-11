@@ -5,6 +5,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class Protocol:
     CMD_SET_LEFT_WHEEL_POWER = 0
     CMD_SET_RIGTH_WHEEL_POWER = 1
@@ -13,17 +14,21 @@ class Protocol:
     CMD_ENABLE_DEBUG = 7
     CMD_SET_OFFSET = 8
     CMD_SET_WHEEL_SPEED = 9
-    
+
     def __init__(self):
         self.serial = None
-    
+
     def connect(self, port, speed):
+        port = '/dev/ttyUSB1'
+        print('port:%s speed:%s' % (port, speed))
+
         if self.serial is not None:
             self.serial.close()
         self.serial = None
 
         try:
             self.serial = serial.Serial(port, speed, timeout=4)
+            print('serial ok')
             return True
         except serial.SerialException as e:
             logger.error(e)
@@ -38,10 +43,12 @@ class Protocol:
             self.serial.write(struct.pack("<B", len(data)) + data)
 
     def set_angle(self, angle):
+        print('set_angle:%s' % (angle, ))
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_ANGLE, angle)
+            print('set_angle data:%s' % (data, ))
             self.serial.write(struct.pack("<B", len(data)) + data)
-    
+
     def set_wheel_speed(self, id, speed):
         if self.serial is not None:
             data = struct.pack("<BBL", self.CMD_SET_WHEEL_SPEED, id, speed)
@@ -56,7 +63,7 @@ class Protocol:
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_SET_RIGTH_WHEEL_POWER, value)
             self.serial.write(struct.pack("<B", len(data)) + data)
-    
+
     def set_enable_debug(self, enable):
         if self.serial is not None:
             data = struct.pack("<BB", self.CMD_ENABLE_DEBUG, enable)
@@ -66,9 +73,9 @@ class Protocol:
         if self.serial is not None:
             data = struct.pack("<Bf", self.CMD_SET_OFFSET, offset)
             self.serial.write(struct.pack("<B", len(data)) + data)
-        
 
     def write(self, message):
+        print('write:%s' % (message, ))
         if self.serial is not None:
             self.serial.write(message)
 
@@ -80,5 +87,3 @@ class Protocol:
         if self.serial is not None:
             self.serial.close()
             self.serial = None
-
-        

@@ -142,6 +142,7 @@ void loop()
         //буффер собран
         if ( buffer[0] == buffer_size)
         {
+            Serial.println("buffer complete");
             car.process_command(&buffer[1], buffer[0]);
             buffer_size = 0;
         }
